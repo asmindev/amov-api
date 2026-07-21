@@ -1,6 +1,31 @@
 # Videasy Decryptor API
 
-Headless FastAPI server that decrypts [Videasy.net](https://player.videasy.to) video streams. Picks a provider (`Yoru`, `Neon`, `Cypher`, or `Breach`), fetches encrypted sources from `api.wingsdatabase.com`, decrypts via `enc-dec.app`, and returns quality-labelled HLS streams + subtitles.
+FastAPI server that decrypts [Videasy.net](https://player.videasy.to) video streams. Fetches encrypted sources from `api.wingsdatabase.com`, decrypts via `enc-dec.app`, and returns quality-labelled HLS streams + subtitles.
+
+## Architecture
+
+```
+┌─────────┐    ┌──────────────────────┐    ┌───────────────┐    ┌────────────┐
+│ Client  │───▶│  /sources endpoint   │───▶│ seed (cached) │───▶│  cipher    │
+└─────────┘    └──────────────────────┘    └───────────────┘    └────────────┘
+                     │                                                    │
+                     │  ┌──────────────────┐                             │
+                     └──│ enc-dec.app      │◀────────────────────────────┘
+                        │ (decrypt)        │
+                        └──────────────────┘
+                                │
+                        ┌───────▼────────┐
+                        │ expand master  │
+                        │ m3u8 → sort    │
+                        │ by quality     │
+                        └───────┬────────┘
+                                │
+                        ┌───────▼────────┐
+                        │   JSON response │
+                        └────────────────┘
+```
+
+Seed requests are cached in-memory per `tmdbId` with the TTL returned by the upstream API, reducing redundant requests.
 
 ## Quick Start
 
@@ -9,26 +34,38 @@ pip install -e .
 uvicorn main:app --host 0.0.0.0 --port 8080
 ```
 
-## Usage
+Open http://localhost:8080 for the interactive landing page, or http://localhost:8080/docs for Swagger UI.
 
-```http
-GET /sources?tmdbId=157336&mediaType=movie&title=Interstellar&year=2014&provider=Yoru
+## API Reference
+
+### `GET /sources`
+
+Fetch decrypted HLS streams and subtitles for a movie or TV show.
+
+#### Parameters
+
+| Parameter    | Type   | Required | Description |
+|-------------|--------|----------|-------------|
+| `tmdbId`    | int    | ✓        | TMDB numerical ID (e.g. `157336` for Interstellar) |
+| `mediaType` | string | ✓        | `movie` or `tv` |
+| `title`     | string | ✓        | Media title (e.g. `Interstellar`) |
+| `provider`  | string | ✓        | `Yoru`, `Neon`, `Cypher`, or `Breach` |
+| `year`      | string |          | Release year (e.g. `2014`) |
+| `seasonId`  | string |          | Season number — TV only (default: `1`) |
+| `episodeId` | string |          | Episode number — TV only (default: `1`) |
+| `imdbId`    | string |          | IMDB ID (e.g. `tt0816692`) |
+
+#### Example Requests
+
+```bash
+# Movie
+curl "http://localhost:8080/sources?tmdbId=157336&mediaType=movie&title=Interstellar&year=2014&provider=Yoru"
+
+# TV Show
+curl "http://localhost:8080/sources?tmdbId=1396&mediaType=tv&title=Breaking+Bad&year=2008&seasonId=1&episodeId=1&provider=Yoru"
 ```
 
-### Parameters
-
-| Param      | Required | Description |
-|------------|----------|-------------|
-| `tmdbId`   | ✓        | TMDB numerical ID |
-| `mediaType`| ✓        | `movie` or `tv` |
-| `title`    | ✓        | Media title |
-| `provider` | ✓        | `Yoru`, `Neon`, `Cypher`, `Breach` |
-| `year`     |          | Release year |
-| `seasonId` |          | Season number (TV, default: 1) |
-| `episodeId`|          | Episode number (TV, default: 1) |
-| `imdbId`   |          | IMDB ID (e.g. `tt0816692`) |
-
-### Response
+#### Success Response (200)
 
 ```json
 {
@@ -36,62 +73,241 @@ GET /sources?tmdbId=157336&mediaType=movie&title=Interstellar&year=2014&provider
   "provider": "Yoru",
   "data": {
     "sources": [
-      {"quality": "4K", "url": "https://..."},
-      {"quality": "1080p", "url": "https://..."}
+      {"quality": "4K", "url": "https://cdn.example.com/stream_2160p.m3u8"},
+      {"quality": "1080p", "url": "https://cdn.example.com/stream_1080p.m3u8"},
+      {"quality": "720p", "url": "https://cdn.example.com/stream_720p.m3u8"},
+      {"quality": "480p", "url": "https://cdn.example.com/stream_480p.m3u8"}
     ],
     "subtitles": [
-      {"lang": "En", "language": "En", "url": "https://..."}
+      {"lang": "En", "language": "En", "url": "https://subs.example.com/track_1.vtt"},
+      {"lang": "Id", "language": "Indonesian", "url": "https://subs.example.com/track_2.vtt"}
     ]
   }
 }
 ```
 
-### Other Endpoints
+#### Error Responses
 
-| Endpoint      | Description |
-|---------------|-------------|
-| `GET /`       | Landing page with docs |
-| `GET /health` | Health check |
-| `GET /providers` | List active providers |
+| Status | Description |
+|--------|-------------|
+| `400`  | Invalid parameters or unknown provider |
+| `429`  | Rate limited by upstream API (wait and retry) |
+| `502`  | Upstream API failure (try a different provider) |
+| `504`  | Upstream request timed out |
+
+Error body:
+
+```json
+{
+  "error": "upstream_error",
+  "detail": "Yoru: upstream HTTP 500"
+}
+```
+
+### `GET /providers`
+
+List available providers and their endpoint slugs.
+
+```json
+{
+  "providers": [
+    {"name": "Yoru", "endpoint": "cdn"},
+    {"name": "Neon", "endpoint": "neon2"},
+    {"name": "Cypher", "endpoint": "downloader2"},
+    {"name": "Breach", "endpoint": "m4uhd"}
+  ]
+}
+```
+
+### `GET /health`
+
+```json
+{"status": "ok", "version": "2.0.0"}
+```
+
+### `GET /`
+
+Landing page with interactive form — test the API directly from the browser.
+
+### `GET /docs`
+
+Swagger UI documentation (auto-generated by FastAPI).
 
 ## Providers
 
-| Name   | Endpoint       | Notes |
-|--------|----------------|-------|
-| Yoru   | `cdn`          | Best quality (up to 4K), most reliable |
-| Neon   | `neon2`        | Lower quality, works for many titles |
-| Cypher | `downloader2`  | Good fallback |
-| Breach | `m4uhd`        | Direct streams, quality mapped (playhq→1080p, bk→480p) |
+| Name   | Endpoint       | Quality | Reliability | Notes |
+|--------|---------------|---------|-------------|-------|
+| Yoru   | `cdn`         | Up to 4K | Best | Works for most titles, highest bitrate |
+| Neon   | `neon2`       | Up to 720p | Moderate | Good fallback for hard-to-find titles |
+| Cypher | `downloader2` | Up to 1080p | Moderate | Often has different subtitle tracks |
+| Breach | `m4uhd`       | 1080p / 480p | Low | Non-standard quality labels mapped automatically |
 
-Try each provider manually if one fails — availability varies per title.
+### Provider Selection Strategy
+
+The API requires you to specify a provider explicitly. There is no auto-fallback — this avoids aggressive rate limiting on the upstream API. Try providers in this order:
+
+```
+Yoru → Neon → Cypher → Breach
+```
+
+If one returns an error, move to the next. Availability varies per title — a provider that works for one movie may fail for another.
+
+### Provider Test Results (Movies)
+
+| Title | Yoru | Neon | Cypher | Breach |
+|-------|------|------|--------|--------|
+| Interstellar | 1080p, 720p, 480p | 720p, 360p, auto | ❌ | 1080p, 480p |
+| Inception | 4K, 1080p, 720p, 480p | 480p, 270p, auto | ❌ | 1080p |
+| The Amazing Spider-Man | 4K, 1080p, 720p, 480p | ❌ | 1080p, 720p, 480p, 360p | ❌ |
+
+### Provider Test Results (TV)
+
+| Title | Episode | Yoru | Neon | Cypher | Breach |
+|-------|---------|------|------|--------|--------|
+| Breaking Bad | S1E1 | 4K, 1080p, 720p, 480p (75 subs) | 720p, 360p, auto (3 subs) | 1080p, 720p, 480p, 360p (13 subs) | ❌ |
+| Stranger Things | S1E1 | ❌ | 720p, 360p, auto (6 subs) | 1080p, 480p (16 subs) | — |
+| Friends | S1E1 | 720p (148 subs) | — | — | — |
+| The Simpsons | S1E1 | 1080p, 720p, 480p (62 subs) | — | — | — |
+
+## Quality Labels
+
+Sources are sorted highest quality first. The quality detection from master `.m3u8` manifests uses resolution height:
+
+| Height   | Label     |
+|----------|-----------|
+| ≥ 2160   | `4K`      |
+| ≥ 1080   | `1080p`   |
+| ≥ 720    | `720p`    |
+| ≥ 480    | `480p`    |
+| ≥ 360    | `360p`    |
+| < 360    | `{h}p`    |
+| unknown  | `Auto`    |
+
+Breach sources use non-standard labels that are automatically mapped:
+
+| Original | Mapped |
+|----------|--------|
+| `playhq` | `1080p` |
+| `bk`     | `480p`  |
+| `hd`     | `720p`  |
 
 ## Deployment
 
-### Local (uvicorn)
+### Local Development
 
 ```bash
+pip install -e .
 uvicorn main:app --host 0.0.0.0 --port 8080
 ```
 
-### Shared Hosting (Passenger)
+Or using the installed script:
 
-1. Upload all files to your hosting
-2. Set Python app entry point to `passenger_wsgi.py`
-3. Install dependencies: `pip install -r requirements.txt` (or generate with `pip freeze > requirements.txt`)
-4. Restart: `touch tmp/restart.txt`
-
-## Architecture
-
-```
-Client → /sources → fetch seed (api.wingsdatabase.com)
-                  → fetch cipher (api.wingsdatabase.com)
-                  → decrypt (enc-dec.app)
-                  → expand master m3u8 → sort by quality → JSON response
+```bash
+videasy
 ```
 
-Seed is cached in-memory per `tmdbId` with TTL from upstream API to reduce redundant requests.
+### Shared Hosting (cPanel + Passenger)
 
-## Tech
+1. Upload all project files to your hosting root
+2. In cPanel → Setup Python App:
+   - Python version: 3.11+
+   - Application root: `/home/user/repositories/Videasy.net-Decryptor`
+   - Entry point: `passenger_wsgi.py`
+3. Dependencies are installed automatically from `pyproject.toml`
+4. Restart the app: `touch tmp/restart.txt`
 
-- Python 3.11+ · FastAPI · httpx (async) · a2wsgi (Passenger bridge)
-- No legacy WASM/JS dependencies — pure Python decryption pipeline
+The `passenger_wsgi.py` file wraps the ASGI FastAPI app for WSGI compatibility using `a2wsgi`.
+
+#### Required Files for Passenger
+
+```
+main.py              # entry point for uvicorn
+passenger_wsgi.py    # entry point for Passenger
+app/                 # application package
+tmp/restart.txt      # touch to restart
+pyproject.toml       # dependencies
+```
+
+### Environment
+
+No environment variables are required. All configuration is in `app/config.py` with sensible defaults.
+
+## Development
+
+### Project Structure
+
+```
+main.py                # uvicorn entry point
+passenger_wsgi.py      # Passenger entry point
+app/
+├── __init__.py
+├── application.py     # FastAPI app, routes, middleware, error handlers
+├── config.py          # Settings (BaseModel)
+├── decrypt.py         # Decryption logic + m3u8 parser
+├── models.py          # Pydantic request/response models
+└── providers.py       # Provider constants
+tmp/
+└── restart.txt        # Passenger restart marker
+pyproject.toml          # Dependencies & build config
+README.md               # This file
+```
+
+### Dependencies
+
+- `fastapi` — web framework
+- `uvicorn[standard]` — ASGI server
+- `httpx` — async HTTP client
+- `a2wsgi` — ASGI→WSGI bridge for Passenger
+
+All dependencies are specified in `pyproject.toml` and managed via `uv`.
+
+### Adding a New Provider
+
+1. Add a `Provider` constant in `app/providers.py`:
+
+   ```python
+   MY_PROVIDER = Provider("MyProvider", "endpoint-slug")
+   AVAILABLE.append(MY_PROVIDER)
+   ```
+
+2. Update `PROVIDER_MAP`:
+
+   ```python
+   PROVIDER_MAP = {p.name.lower(): p for p in AVAILABLE}
+   ```
+
+3. Add quality label mappings in `app/decrypt.py` if the provider uses non-standard labels.
+
+### Testing
+
+```bash
+uv run python3 -c "
+import asyncio
+from httpx import ASGITransport, AsyncClient
+from app.application import app
+
+async def t():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://test') as c:
+        app.state.client = AsyncClient(timeout=30)
+        app.state.cache = {}
+        r = await c.get('/sources?tmdbId=157336&mediaType=movie&title=Interstellar&provider=Yoru')
+        print(r.status_code, r.json()['data']['sources'][0]['quality'])
+asyncio.run(t())
+"
+```
+
+## Rate Limiting
+
+The upstream API (`api.wingsdatabase.com`) enforces rate limiting. If you receive a `429` response, wait 10–30 seconds before retrying. The seed endpoint is especially sensitive — seeds are cached in-memory for their TTL duration to minimise redundant requests.
+
+## Technical Notes
+
+- **No WASM/JS dependencies**: The decryption pipeline uses `enc-dec.app` directly — no `wasmtime`, `py_mini_racer`, or Node.js required.
+- **Master m3u8 expansion**: If a source URL contains `/master.m3u8`, the manifest is fetched and parsed for `#EXT-X-STREAM-INF` entries with `RESOLUTION` to extract and label each quality variant.
+- **Title encoding**: The title is double URL-encoded (`quote(quote(title))`) before being sent to the upstream API.
+- **Required headers**: All upstream requests include `Origin`, `Referer`, and a Chrome 137 User-Agent to mimic a legitimate browser request.
+
+## License
+
+MIT
