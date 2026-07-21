@@ -1,0 +1,21 @@
+[project]
+name = "videasy-decryptor"
+version = "2.0.0"
+description = "Videasy.net Decryptor — multi-provider stream unlocker API"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "httpx",
+    "a2wsgi",
+]
+
+[project.scripts]
+videasy = "main:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["main.py", "app/"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
