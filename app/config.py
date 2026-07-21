@@ -13,6 +13,7 @@ class Settings(BaseModel):
     )
     request_timeout: int = 30
     cache_ttl_offset: int = 5_000
+    opensubtitles_api_key: str = "bOPLedTRgxt5u4jRtkXIbxMf36OSbvEH"
 
 
 settings = Settings()
