@@ -182,11 +182,6 @@ async def get_sources(
         seasonId=seasonId,
         imdbId=imdbId,
     )
-    
-    import asyncio
-    os_task = None
-    if params.imdbId:
-        os_task = asyncio.create_task(fetch_opensubtitles(app.state.client, params.imdbId))
 
     try:
         provider_name, raw = await _get_sources(
@@ -203,24 +198,30 @@ async def get_sources(
         raise HTTPException(status_code=502, detail=f"{prov.name}: upstream HTTP {e.response.status_code}")
     except (httpx.RequestError, ConnectionError) as e:
         raise HTTPException(status_code=502, detail=f"{prov.name}: connection error — {e}")
-    except (RuntimeError, json.JSONDecodeError, ValueError, KeyError) as e:
-        raise HTTPException(status_code=502, detail=f"{prov.name}: {e}")
-
     decrypted_data = DecryptedData.from_raw(raw)
     
-    if os_task:
-        try:
-            os_subs = await os_task
-            if os_subs:
-                decrypted_data.subtitles.extend(os_subs)
-        except Exception as e:
-            logger.error(f"Error awaiting OpenSubtitles task: {e}")
-
+    for sub in decrypted_data.subtitles:
+        # Menambahkan label nama provider pada subtitle bawaan
+        sub.language = f"{provider_name} - {sub.language}"
+    
     return SourceResponse(
         tmdbId=tmdbId,
         provider=provider_name,
         data=decrypted_data,
     )
+
+
+@app.get(
+    "/subtitles/opensubtitles",
+    summary="Fetch OpenSubtitles manually",
+    description="Fetch subtitles directly from OpenSubtitles using IMDb ID.",
+    tags=["Sources"],
+)
+async def get_opensubtitles(
+    imdbId: str = Query(..., pattern=r"^tt\d+$", description="IMDB ID (e.g. tt0816692)"),
+) -> dict[str, Any]:
+    subs = await fetch_opensubtitles(app.state.client, imdbId)
+    return {"subtitles": [sub.model_dump() for sub in subs]}
 
 
 @app.get(
@@ -426,6 +427,10 @@ async def root() -> str:
       </div>
       <div class="flex">
         <button class="btn btn-primary" id="fetch-btn" onclick="fetchSources()">Fetch sources</button>
+        <button class="btn btn-secondary" id="fetch-os-btn" onclick="fetchOpenSubtitles()">💬 OpenSubtitles</button>
+        <select id="os-dropdown" style="display:none; flex:1; max-width:200px" onchange="copyOsLink(this)" class="field select">
+          <option value="">-- Select Subtitle --</option>
+        </select>
         <span class="text-muted" id="req-url" style="font-family:'JetBrains Mono',monospace;font-size:.75rem"></span>
       </div>
       <div id="status" class="mt-2"></div>
@@ -557,6 +562,51 @@ async def root() -> str:
         statusDiv.className = 'status-bar err';
         statusDiv.textContent = '✗ ' + e.message;
         output.textContent = e.message;
+      }}
+    }}
+
+    async function fetchOpenSubtitles() {{
+      const imdb = document.getElementById('imdb').value.trim();
+      if (!imdb) {{
+        alert("Please fill in imdbId first");
+        return;
+      }}
+      
+      const osBtn = document.getElementById('fetch-os-btn');
+      const osDropdown = document.getElementById('os-dropdown');
+      
+      osBtn.innerHTML = '<span class="spinner" style="margin-right:6px"></span> Fetching...';
+      osBtn.disabled = true;
+      osDropdown.style.display = 'none';
+      osDropdown.innerHTML = '<option value="">-- Select Subtitle --</option>';
+      
+      try {{
+        const resp = await fetch('/subtitles/opensubtitles?imdbId=' + imdb);
+        const data = await resp.json();
+        
+        if (resp.ok && data.subtitles && data.subtitles.length > 0) {{
+          data.subtitles.forEach(sub => {{
+            const opt = document.createElement('option');
+            opt.value = sub.url;
+            opt.textContent = sub.language;
+            osDropdown.appendChild(opt);
+          }});
+          osDropdown.style.display = 'block';
+          osBtn.innerHTML = '💬 OpenSubtitles (' + data.subtitles.length + ')';
+        }} else {{
+          osBtn.innerHTML = '💬 No Subtitles found';
+        }}
+      }} catch (e) {{
+        osBtn.innerHTML = '💬 Error fetching';
+      }}
+      osBtn.disabled = false;
+    }}
+
+    function copyOsLink(select) {{
+      if(select.value) {{
+        navigator.clipboard.writeText(select.value);
+        alert("Subtitle URL copied to clipboard!");
+        select.value = "";
       }}
     }}
 
