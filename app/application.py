@@ -212,16 +212,62 @@ async def get_sources(
 
 
 @app.get(
-    "/subtitles/opensubtitles",
-    summary="Fetch OpenSubtitles manually",
-    description="Fetch subtitles directly from OpenSubtitles using IMDb ID.",
-    tags=["Sources"],
+    "/subtitles",
+    summary="List available subtitle sources",
+    tags=["Subtitles"],
 )
-async def get_opensubtitles(
-    imdbId: str = Query(..., pattern=r"^tt\d+$", description="IMDB ID (e.g. tt0816692)"),
+async def list_subtitle_sources() -> dict[str, list[str]]:
+    providers = [p.name.lower() for p in AVAILABLE]
+    providers.append("opensubtitles")
+    return {"sources": providers}
+
+
+@app.get(
+    "/subtitles/{provider_name}",
+    summary="Fetch subtitles manually from a specific provider",
+    description="Fetch subtitles from video providers or OpenSubtitles.",
+    tags=["Subtitles"],
+)
+async def get_provider_subtitles(
+    provider_name: str = Path(..., description="Provider name (e.g. yoru, neon, opensubtitles)"),
+    title: str = Query(default="", description="Media title (e.g. Interstellar)"),
+    mediaType: str = Query(default="movie", pattern=r"^(movie|tv)$", description="Media type"),
+    tmdbId: str = Query(default="", pattern=r"^\d*$", description="TMDB numerical ID"),
+    year: str = Query(default="", pattern=r"^\d{4}$|^$", description="Release year (optional)"),
+    episodeId: str = Query(default="1", pattern=r"^\d+$", description="Episode number"),
+    seasonId: str = Query(default="1", pattern=r"^\d+$", description="Season number"),
+    imdbId: str = Query(default="", pattern=r"^tt\d+$|^$", description="IMDB ID"),
 ) -> dict[str, Any]:
-    subs = await fetch_opensubtitles(app.state.client, imdbId)
-    return {"subtitles": [sub.model_dump() for sub in subs]}
+    provider_lower = provider_name.lower()
+    
+    if provider_lower == "opensubtitles":
+        if not imdbId:
+            raise HTTPException(status_code=400, detail="imdbId is required for OpenSubtitles")
+        subs = await fetch_opensubtitles(app.state.client, imdbId)
+        return {"subtitles": [sub.model_dump() for sub in subs]}
+        
+    prov = PROVIDER_MAP.get(provider_lower)
+    if not prov:
+        available = ", ".join([p.name.lower() for p in AVAILABLE] + ["opensubtitles"])
+        raise HTTPException(status_code=400, detail=f"Unknown subtitle provider '{provider_name}'. Available: {available}")
+        
+    if not title or not tmdbId:
+        raise HTTPException(status_code=400, detail="title and tmdbId are required for video providers")
+
+    params = SourceParams(
+        title=title, mediaType=mediaType, tmdbId=tmdbId, provider=prov.name,
+        year=year, episodeId=episodeId, seasonId=seasonId, imdbId=imdbId
+    )
+
+    try:
+        _, raw = await _get_sources(app.state.client, app.state.cache, prov, params)
+        decrypted_data = DecryptedData.from_raw(raw)
+        subs = decrypted_data.subtitles
+        for sub in subs:
+            sub.language = f"{prov.name} - {sub.language}"
+        return {"subtitles": [sub.model_dump() for sub in subs]}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"{prov.name} subtitle fetch error: {str(e)}")
 
 
 @app.get(
@@ -427,7 +473,14 @@ async def root() -> str:
       </div>
       <div class="flex">
         <button class="btn btn-primary" id="fetch-btn" onclick="fetchSources()">Fetch sources</button>
-        <button class="btn btn-secondary" id="fetch-os-btn" onclick="fetchOpenSubtitles()">💬 OpenSubtitles</button>
+        <select id="sub-source" class="field select" style="max-width:140px; padding: 7px 12px;">
+          <option value="opensubtitles">OpenSubtitles</option>
+          <option value="yoru">Yoru</option>
+          <option value="neon">Neon</option>
+          <option value="cypher">Cypher</option>
+          <option value="breach">Breach</option>
+        </select>
+        <button class="btn btn-secondary" id="fetch-sub-btn" onclick="fetchSubtitles()">💬 Fetch Subs</button>
         <select id="os-dropdown" style="display:none; flex:1; max-width:200px" onchange="copyOsLink(this)" class="field select">
           <option value="">-- Select Subtitle --</option>
         </select>
@@ -565,23 +618,41 @@ async def root() -> str:
       }}
     }}
 
-    async function fetchOpenSubtitles() {{
+    async function fetchSubtitles() {{
+      const source = document.getElementById('sub-source').value;
+      const tmdb = document.getElementById('tmdb').value.trim();
+      const title = document.getElementById('title').value.trim();
+      const year = document.getElementById('year').value.trim();
+      const type = document.getElementById('type').value;
+      const season = document.getElementById('season').value.trim() || '1';
+      const episode = document.getElementById('episode').value.trim() || '1';
       const imdb = document.getElementById('imdb').value.trim();
-      if (!imdb) {{
-        alert("Please fill in imdbId first");
+
+      if (source === 'opensubtitles' && !imdb) {{
+        alert("Please fill in imdbId for OpenSubtitles");
+        return;
+      }}
+      if (source !== 'opensubtitles' && (!tmdb || !title)) {{
+        alert("Please fill in tmdbId and title for " + source);
         return;
       }}
       
-      const osBtn = document.getElementById('fetch-os-btn');
+      const subBtn = document.getElementById('fetch-sub-btn');
       const osDropdown = document.getElementById('os-dropdown');
       
-      osBtn.innerHTML = '<span class="spinner" style="margin-right:6px"></span> Fetching...';
-      osBtn.disabled = true;
+      subBtn.innerHTML = '<span class="spinner" style="margin-right:6px"></span> Fetching...';
+      subBtn.disabled = true;
       osDropdown.style.display = 'none';
       osDropdown.innerHTML = '<option value="">-- Select Subtitle --</option>';
       
+      const params = new URLSearchParams({{
+        title, mediaType: type, tmdbId: tmdb,
+        ...(year && {{year}}), ...(type === 'tv' && {{seasonId: season, episodeId: episode}}),
+        ...(imdb && {{imdbId: imdb}})
+      }});
+      
       try {{
-        const resp = await fetch('/subtitles/opensubtitles?imdbId=' + imdb);
+        const resp = await fetch('/subtitles/' + source + '?' + params.toString());
         const data = await resp.json();
         
         if (resp.ok && data.subtitles && data.subtitles.length > 0) {{
@@ -592,14 +663,14 @@ async def root() -> str:
             osDropdown.appendChild(opt);
           }});
           osDropdown.style.display = 'block';
-          osBtn.innerHTML = '💬 OpenSubtitles (' + data.subtitles.length + ')';
+          subBtn.innerHTML = '💬 Subs (' + data.subtitles.length + ')';
         }} else {{
-          osBtn.innerHTML = '💬 No Subtitles found';
+          subBtn.innerHTML = '💬 No Subs found';
         }}
       }} catch (e) {{
-        osBtn.innerHTML = '💬 Error fetching';
+        subBtn.innerHTML = '💬 Error';
       }}
-      osBtn.disabled = false;
+      subBtn.disabled = false;
     }}
 
     function copyOsLink(select) {{
