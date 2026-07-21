@@ -8,7 +8,7 @@ from typing import Any
 from urllib.parse import urlencode, quote
 
 import httpx
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Path
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 
@@ -318,7 +318,12 @@ async def proxy_hls(
 ) -> StreamingResponse:
     """Stream any HLS URL through the backend with the configured Referer/Origin headers."""
     req = app.state.client.build_request("GET", url, headers=_build_headers())
-    resp = await app.state.client.send(req, stream=True, follow_redirects=True)
+    try:
+        resp = await app.state.client.send(req, stream=True, follow_redirects=True)
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Upstream timeout connecting to stream")
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=502, detail=f"Upstream connection error: {e}")
 
     if resp.status_code == 403:
         await resp.aclose()
@@ -327,9 +332,20 @@ async def proxy_hls(
         await resp.aclose()
         raise HTTPException(status_code=404, detail=f"Resource not found: {url}")
 
+    async def stream_generator():
+        try:
+            async for chunk in resp.aiter_bytes(chunk_size=64 * 1024):
+                yield chunk
+        except httpx.TimeoutException:
+            logger.warning("ReadTimeout while streaming proxy chunk from %s", url)
+        except httpx.RequestError as e:
+            logger.warning("RequestError while streaming proxy chunk from %s: %s", url, e)
+        finally:
+            await resp.aclose()
+
     content_type = resp.headers.get("content-type", "application/octet-stream")
     return StreamingResponse(
-        resp.aiter_bytes(chunk_size=64 * 1024),
+        stream_generator(),
         status_code=resp.status_code,
         media_type=content_type,
         headers={
