@@ -53,6 +53,16 @@
         <span class="text-xs text-slate-500 font-mono">GET /sources</span>
       </div>
 
+      <!-- Mode Selector: Movie vs TV -->
+      <div class="flex items-center gap-2 mb-5 p-1 bg-dark-900 border border-white/10 rounded-xl w-fit">
+        <button id="v-mode-movie" onclick="setVideasyMode('movie')" class="px-5 py-2 rounded-lg text-xs font-bold transition bg-blue-600 text-white shadow-md">
+          🎬 Movie Mode
+        </button>
+        <button id="v-mode-tv" onclick="setVideasyMode('tv')" class="px-5 py-2 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white">
+          📺 TV Series Mode
+        </button>
+      </div>
+
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         <div>
           <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">tmdbId</label>
@@ -67,26 +77,25 @@
           <input id="year" value="2014" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-blue-400 transition">
         </div>
         <div>
-          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">mediaType</label>
-          <select id="type" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-blue-400 transition">
-            <option value="movie" selected>movie</option>
-            <option value="tv">tv</option>
-          </select>
+          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">imdbId</label>
+          <input id="imdb" value="tt0816692" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-blue-400 transition">
         </div>
       </div>
 
-      <div class="grid grid-cols-3 gap-3 mb-4">
-        <div>
-          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">seasonId</label>
-          <input id="season" value="1" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-blue-400 transition">
+      <!-- TV Series Season/Episode Fields (Shown when TV Mode is active) -->
+      <div id="v-tv-fields" style="display:none" class="p-3 bg-purple-950/20 border border-purple-500/20 rounded-xl mb-4">
+        <div class="text-[0.7rem] font-bold text-purple-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+          <span>📺 TV Episode Selector</span>
         </div>
-        <div>
-          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">episodeId</label>
-          <input id="episode" value="1" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-blue-400 transition">
-        </div>
-        <div>
-          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">imdbId</label>
-          <input id="imdb" value="tt0816692" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-blue-400 transition">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[0.7rem] uppercase tracking-wider text-purple-400 font-semibold mb-1">seasonId</label>
+            <input id="season" value="1" class="w-full px-3 py-2 bg-dark-700 border border-purple-500/30 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-purple-400 transition">
+          </div>
+          <div>
+            <label class="block text-[0.7rem] uppercase tracking-wider text-purple-400 font-semibold mb-1">episodeId</label>
+            <input id="episode" value="1" class="w-full px-3 py-2 bg-dark-700 border border-purple-500/30 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-purple-400 transition">
+          </div>
         </div>
       </div>
 
@@ -117,14 +126,24 @@
         <span class="text-xs text-slate-500 font-mono">GET /moviebox/sources</span>
       </div>
 
+      <!-- Mode Selector for Moviebox: Movie vs TV -->
+      <div class="flex items-center gap-2 mb-5 p-1 bg-dark-900 border border-white/10 rounded-xl w-fit">
+        <button id="mb-mode-movie" onclick="setMovieboxMode('movie')" class="px-5 py-2 rounded-lg text-xs font-bold transition bg-emerald-600 text-white shadow-md">
+          🎬 Movie Mode
+        </button>
+        <button id="mb-mode-tv" onclick="setMovieboxMode('tv')" class="px-5 py-2 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white">
+          📺 TV Series Mode
+        </button>
+      </div>
+
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
         <div>
           <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">imdbId (Reverse Lookup)</label>
-          <input id="mb-imdb" value="tt9018736" placeholder="tt9018736" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
+          <input id="mb-imdb" value="tt33311069" placeholder="tt33311069" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
         </div>
         <div>
           <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">subjectId (Optional)</label>
-          <input id="mb-subject" value="7850278583678682192" placeholder="7850278583678682192" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
+          <input id="mb-subject" value="4394044471852286152" placeholder="4394044471852286152" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
         </div>
         <div>
           <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">Full Moviebox URL (Optional)</label>
@@ -132,14 +151,20 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-2 gap-3 mb-4">
-        <div>
-          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">seasonId (TV Only)</label>
-          <input id="mb-season" value="1" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
+      <!-- TV Series Season/Episode Fields (Shown when TV Mode is active) -->
+      <div id="mb-tv-fields" style="display:none" class="p-3 bg-emerald-950/20 border border-emerald-500/20 rounded-xl mb-4">
+        <div class="text-[0.7rem] font-bold text-emerald-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+          <span>📺 Moviebox TV Episode Selector</span>
         </div>
-        <div>
-          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">episodeId (TV Only)</label>
-          <input id="mb-episode" value="1" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[0.7rem] uppercase tracking-wider text-emerald-400 font-semibold mb-1">seasonId</label>
+            <input id="mb-season" value="1" class="w-full px-3 py-2 bg-dark-700 border border-emerald-500/30 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
+          </div>
+          <div>
+            <label class="block text-[0.7rem] uppercase tracking-wider text-emerald-400 font-semibold mb-1">episodeId</label>
+            <input id="mb-episode" value="1" class="w-full px-3 py-2 bg-dark-700 border border-emerald-500/30 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
+          </div>
         </div>
       </div>
 
@@ -200,6 +225,64 @@
 
   <script>
     let activeProvider = "Yoru";
+    let videasyMode = "movie";
+    let movieboxMode = "movie";
+
+    function setVideasyMode(mode) {
+      videasyMode = mode;
+      const movieBtn = document.getElementById('v-mode-movie');
+      const tvBtn = document.getElementById('v-mode-tv');
+      const tvFields = document.getElementById('v-tv-fields');
+
+      if (mode === 'movie') {
+        movieBtn.className = 'px-5 py-2 rounded-lg text-xs font-bold transition bg-blue-600 text-white shadow-md';
+        tvBtn.className = 'px-5 py-2 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white';
+        tvFields.style.display = 'none';
+
+        document.getElementById('tmdb').value = '157336';
+        document.getElementById('title').value = 'Interstellar';
+        document.getElementById('year').value = '2014';
+        document.getElementById('imdb').value = 'tt0816692';
+      } else {
+        tvBtn.className = 'px-5 py-2 rounded-lg text-xs font-bold transition bg-purple-600 text-white shadow-md';
+        movieBtn.className = 'px-5 py-2 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white';
+        tvFields.style.display = 'block';
+
+        document.getElementById('tmdb').value = '1396';
+        document.getElementById('title').value = 'Breaking Bad';
+        document.getElementById('year').value = '2008';
+        document.getElementById('season').value = '1';
+        document.getElementById('episode').value = '1';
+        document.getElementById('imdb').value = 'tt0903747';
+      }
+    }
+
+    function setMovieboxMode(mode) {
+      movieboxMode = mode;
+      const movieBtn = document.getElementById('mb-mode-movie');
+      const tvBtn = document.getElementById('mb-mode-tv');
+      const tvFields = document.getElementById('mb-tv-fields');
+
+      if (mode === 'movie') {
+        movieBtn.className = 'px-5 py-2 rounded-lg text-xs font-bold transition bg-emerald-600 text-white shadow-md';
+        tvBtn.className = 'px-5 py-2 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white';
+        tvFields.style.display = 'none';
+
+        document.getElementById('mb-imdb').value = 'tt33311069';
+        document.getElementById('mb-subject').value = '4394044471852286152';
+        document.getElementById('mb-url').value = '';
+      } else {
+        tvBtn.className = 'px-5 py-2 rounded-lg text-xs font-bold transition bg-purple-600 text-white shadow-md';
+        movieBtn.className = 'px-5 py-2 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white';
+        tvFields.style.display = 'block';
+
+        document.getElementById('mb-imdb').value = 'tt9018736';
+        document.getElementById('mb-subject').value = '7850278583678682192';
+        document.getElementById('mb-season').value = '1';
+        document.getElementById('mb-episode').value = '1';
+        document.getElementById('mb-url').value = '';
+      }
+    }
 
     document.querySelectorAll('.prov-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -237,7 +320,7 @@
       const tmdb = document.getElementById('tmdb').value.trim();
       const title = document.getElementById('title').value.trim();
       const year = document.getElementById('year').value.trim();
-      const type = document.getElementById('type').value;
+      const type = videasyMode;
       const season = document.getElementById('season').value.trim() || '1';
       const episode = document.getElementById('episode').value.trim() || '1';
       const imdb = document.getElementById('imdb').value.trim();
@@ -312,8 +395,7 @@
         ...(imdbVal && { imdbId: imdbVal }),
         ...(subjectVal && { subjectId: subjectVal }),
         ...(urlVal && { url: urlVal }),
-        seasonId: season,
-        episodeId: episode
+        ...(movieboxMode === 'tv' && { seasonId: season, episodeId: episode })
       });
 
       const url = '/moviebox/sources?' + params.toString();
@@ -337,7 +419,8 @@
           const sourcesList = data.sources || data.data?.sources || [];
           const subsList = data.subtitles || data.data?.subtitles || [];
           const metaTitle = data.meta?.title ? (data.meta.title + ' • ') : '';
-          statusDiv.innerHTML = '✓ Moviebox — ' + metaTitle + sourcesList.length + ' source(s), ' + subsList.length + ' subtitle(s)';
+          const typeBadge = data.meta?.mediaType === 'tv' ? '📺 TV' : '🎬 Movie';
+          statusDiv.innerHTML = '✓ Moviebox (' + typeBadge + ') — ' + metaTitle + sourcesList.length + ' source(s), ' + subsList.length + ' subtitle(s)';
           if (sourcesList.length > 0) {
             lastMbSources = sourcesList;
             lastMbSubs = subsList;
@@ -373,22 +456,32 @@
         const resp = await fetch('/moviebox/search?q=' + encodeURIComponent(q));
         const data = await resp.json();
         if (resp.ok && data.results) {
-          statusDiv.innerHTML = '<span class="text-xs text-emerald-400">Found ' + data.results.length + ' item(s)</span>';
+          statusDiv.innerHTML = '<span class="text-xs text-emerald-400 font-bold">Found ' + data.results.length + ' item(s)</span>';
           data.results.forEach(item => {
+            const isTv = item.subjectType === 2;
             const card = document.createElement('div');
-            card.className = 'p-3 bg-dark-900 border border-white/5 rounded-xl flex items-center justify-between text-xs hover:border-indigo-400/50 transition cursor-pointer';
+            card.className = `p-3 bg-dark-900 border ${isTv ? 'border-purple-500/20 hover:border-purple-400' : 'border-blue-500/20 hover:border-blue-400'} rounded-xl flex items-center justify-between text-xs transition cursor-pointer`;
             card.onclick = () => {
               document.getElementById('mb-subject').value = item.subjectId;
               document.getElementById('mb-imdb').value = '';
               document.getElementById('mb-url').value = '';
+              setMovieboxMode(isTv ? 'tv' : 'movie');
               fetchMoviebox();
             };
+            const typeBadge = isTv
+              ? '<span class="px-2 py-0.5 bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded font-bold text-[0.65rem] tracking-wider">📺 TV SHOW</span>'
+              : '<span class="px-2 py-0.5 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded font-bold text-[0.65rem] tracking-wider">🎬 MOVIE</span>';
+
             card.innerHTML = `
               <div>
-                <div class="font-bold text-white">${item.title} (${item.year || 'N/A'})</div>
-                <div class="text-slate-500 font-mono text-[0.7rem]">${item.genre} • Rating: ${item.imdbRating || 'N/A'}</div>
+                <div class="font-bold text-white flex items-center gap-2 mb-0.5">
+                  ${typeBadge}
+                  <span>${item.title}</span>
+                  <span class="text-slate-400 font-normal">(${item.year || 'N/A'})</span>
+                </div>
+                <div class="text-slate-400 font-mono text-[0.7rem]">${item.genre || 'General'} • IMDb: ${item.imdbRating || 'N/A'}</div>
               </div>
-              <span class="px-2 py-1 bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 rounded font-mono text-[0.7rem]">Test</span>
+              <span class="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-white rounded font-mono text-[0.7rem] transition">Test Stream</span>
             `;
             resultsDiv.appendChild(card);
           });
