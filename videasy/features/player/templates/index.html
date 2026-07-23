@@ -115,14 +115,10 @@
           <span class="text-xs text-slate-500 font-mono">GET /moviebox/sources</span>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
           <div>
             <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">imdbId (Reverse Lookup)</label>
             <input id="mb-m-imdb" value="tt33311069" placeholder="tt33311069" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
-          </div>
-          <div>
-            <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">subjectId (Optional)</label>
-            <input id="mb-m-subject" value="4394044471852286152" placeholder="4394044471852286152" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
           </div>
           <div>
             <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">Full Movie URL (Optional)</label>
@@ -218,14 +214,10 @@
           <span class="text-xs text-slate-500 font-mono">GET /moviebox/sources</span>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
           <div>
             <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">imdbId (Reverse Lookup)</label>
             <input id="mb-tv-imdb" value="tt9018736" placeholder="tt9018736" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
-          </div>
-          <div>
-            <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">subjectId (Optional)</label>
-            <input id="mb-tv-subject" value="7850278583678682192" placeholder="7850278583678682192" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
           </div>
           <div>
             <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">Full TV URL (Optional)</label>
@@ -324,7 +316,6 @@
       const secTv = document.getElementById('section-tv');
       const secSearch = document.getElementById('section-search');
 
-      // Reset styles
       moviesBtn.className = 'flex-1 py-3 px-6 rounded-xl text-sm font-extrabold transition text-slate-400 hover:text-white flex items-center justify-center gap-2';
       tvBtn.className = 'flex-1 py-3 px-6 rounded-xl text-sm font-extrabold transition text-slate-400 hover:text-white flex items-center justify-center gap-2';
       searchBtn.className = 'flex-1 py-3 px-6 rounded-xl text-sm font-extrabold transition text-slate-400 hover:text-white flex items-center justify-center gap-2';
@@ -444,12 +435,10 @@
     let lastMbMovieSources = null, lastMbMovieSubs = null;
     async function fetchMovieboxMovie() {
       const imdbVal = document.getElementById('mb-m-imdb').value.trim();
-      const subjectVal = document.getElementById('mb-m-subject').value.trim();
       const urlVal = document.getElementById('mb-m-url').value.trim();
 
       const params = new URLSearchParams({
         ...(imdbVal && { imdbId: imdbVal }),
-        ...(subjectVal && { subjectId: subjectVal }),
         ...(urlVal && { url: urlVal })
       });
 
@@ -560,14 +549,12 @@
     let lastMbTvSources = null, lastMbTvSubs = null;
     async function fetchMovieboxTv() {
       const imdbVal = document.getElementById('mb-tv-imdb').value.trim();
-      const subjectVal = document.getElementById('mb-tv-subject').value.trim();
       const urlVal = document.getElementById('mb-tv-url').value.trim();
       const season = document.getElementById('mb-tv-season').value.trim() || '1';
       const episode = document.getElementById('mb-tv-episode').value.trim() || '1';
 
       const params = new URLSearchParams({
         ...(imdbVal && { imdbId: imdbVal }),
-        ...(subjectVal && { subjectId: subjectVal }),
         ...(urlVal && { url: urlVal }),
         seasonId: season, episodeId: episode
       });
@@ -637,15 +624,11 @@
             card.onclick = () => {
               if (isTv) {
                 switchCategory('tv');
-                document.getElementById('mb-tv-subject').value = item.subjectId;
-                document.getElementById('mb-tv-imdb').value = '';
-                document.getElementById('mb-tv-url').value = '';
+                document.getElementById('mb-tv-url').value = item.url || '';
                 fetchMovieboxTv();
               } else {
                 switchCategory('movies');
-                document.getElementById('mb-m-subject').value = item.subjectId;
-                document.getElementById('mb-m-imdb').value = '';
-                document.getElementById('mb-m-url').value = '';
+                document.getElementById('mb-m-url').value = item.url || '';
                 fetchMovieboxMovie();
               }
             };
