@@ -310,7 +310,8 @@ async def fetch_play_streams(
             resolution = dash.get("resolutions") or dash.get("resolution", 0)
             if isinstance(resolution, str) and resolution.isdigit():
                 resolution = int(resolution)
-            quality = _QUALITY_MAP.get(resolution, f"{resolution}p") if isinstance(resolution, int) and resolution > 0 else "Auto"
+            quality_base = _QUALITY_MAP.get(resolution, f"{resolution}p") if isinstance(resolution, int) and resolution > 0 else "Auto"
+            quality = f"{quality_base} (DASH)" if "DASH" not in quality_base else quality_base
             sign_cookie = dash.get("signCookie") or ""
             sign_header_key = dash.get("signHeaderKey") or "X-MB-Token"
             st_item = {"quality": quality, "url": stream_url, "type": "dash"}

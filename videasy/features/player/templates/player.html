@@ -231,7 +231,9 @@
           (isActive
             ? 'border-blue-400 text-blue-400 bg-blue-400/10'
             : 'border-white/10 bg-transparent text-slate-400 hover:border-blue-400 hover:text-slate-200');
-        const label = (s.source ? '[' + s.source + '] ' : '') + (s.quality || 'Auto');
+        const qualStr = s.quality || 'Auto';
+        const typeTag = (s.type === 'dash' || (s.url && s.url.includes('.mpd'))) && !qualStr.toLowerCase().includes('dash') ? ' (DASH)' : (s.type === 'hls' || (s.url && s.url.includes('.m3u8'))) && !qualStr.toLowerCase().includes('hls') ? ' (HLS)' : '';
+        const label = (s.source ? '[' + s.source + '] ' : '') + qualStr + typeTag;
         btn.textContent = (isDirect ? '▶ ' : '🔗 ') + label;
         btn.onclick = () => {
           document.querySelectorAll('#sources button').forEach(b => {
