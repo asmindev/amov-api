@@ -607,19 +607,30 @@ async def resolve_imdb_to_moviebox(
         return "", ""
 
     try:
-        url = f"https://v3-cinemeta.strem.io/meta/series/{imdb_id}.json"
-        r = await client.get(url, timeout=5.0)
-        if r.status_code != 200:
-            url = f"https://v3-cinemeta.strem.io/meta/movie/{imdb_id}.json"
-            r = await client.get(url, timeout=5.0)
+        meta = {}
+        r = await client.get(
+            f"https://v3-cinemeta.strem.io/meta/series/{imdb_id}.json",
+            follow_redirects=True,
+            timeout=5.0,
+        )
+        if r.status_code == 200:
+            meta = r.json().get("meta", {}) or {}
 
-        if r.status_code != 200:
+        if not meta:
+            r = await client.get(
+                f"https://v3-cinemeta.strem.io/meta/movie/{imdb_id}.json",
+                follow_redirects=True,
+                timeout=5.0,
+            )
+            if r.status_code == 200:
+                meta = r.json().get("meta", {}) or {}
+
+        if not meta:
             logger.warning("Reverse IMDB lookup failed for %s", imdb_id)
             return "", ""
 
-        meta = r.json().get("meta", {})
         title = meta.get("name", "")
-        year = str(meta.get("year", ""))[:4]
+        year = str(meta.get("year") or meta.get("releaseInfo") or "")[:4]
         media_type = meta.get("type", "movie")
         subject_type = 2 if media_type == "series" else 1
 
@@ -774,8 +785,9 @@ async def search_titles(
         headers["Cookie"] = f"i18n_lang=en; token={token}"
 
     url = f"{API_BASE}/wefeed-h5api-bff/subject/search"
-    logger.info("searching moviebox: query=%r page=%s", query, page)
-    payload = {"keyword": query, "page": page, "perPage": per_page}
+    sanitized_query = re.sub(r"[^\w\s]", " ", query, flags=re.UNICODE)
+    sanitized_query = re.sub(r"\s+", " ", sanitized_query).strip()
+    payload = {"keyword": sanitized_query or query, "page": page, "perPage": per_page}
 
     try:
         resp = await client.post(url, json=payload, headers=headers)
