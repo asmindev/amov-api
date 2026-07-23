@@ -16,6 +16,6 @@ def build_default_headers() -> dict[str, str]:
 
 def create_http_client() -> httpx.AsyncClient:
     return httpx.AsyncClient(
-        timeout=httpx.Timeout(connect=10.0, read=60.0, write=10.0, pool=10.0),
+        timeout=httpx.Timeout(connect=10.0, read=None, write=10.0, pool=10.0),
         headers=build_default_headers(),
     )

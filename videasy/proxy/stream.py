@@ -68,10 +68,8 @@ async def do_proxy_stream(
         try:
             async for chunk in resp.aiter_bytes(chunk_size=64 * 1024):
                 yield chunk
-        except httpx.TimeoutException:
-            logger.warning("ReadTimeout while streaming proxy chunk from %s", target_url)
-        except httpx.RequestError as e:
-            logger.warning("RequestError while streaming proxy chunk from %s: %s", target_url, e)
+        except (httpx.TimeoutException, httpx.RequestError, Exception) as e:
+            logger.debug("Proxy stream ended for %s: %s", target_url, e)
         finally:
             await resp.aclose()
 
@@ -82,10 +80,8 @@ async def do_proxy_stream(
         "Accept-Ranges": "bytes",
         "Cache-Control": "public, max-age=3600",
     }
-    # Only send Content-Length for Partial Content (206) to prevent Uvicorn "Response content shorter than Content-Length"
-    # when chunked streaming finishes early or times out.
-    if resp.status_code == 206 and resp.headers.get("content-length"):
-        res_headers["Content-Length"] = resp.headers["content-length"]
+    # NEVER set Content-Length on StreamingResponse to prevent Uvicorn "Response content shorter than Content-Length"
+    # when chunked streaming ends early, is paused, or is cancelled by client.
     if resp.headers.get("content-range"):
         res_headers["Content-Range"] = resp.headers["content-range"]
     if resp.headers.get("content-disposition"):
