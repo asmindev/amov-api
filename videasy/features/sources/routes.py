@@ -103,7 +103,7 @@ async def get_sources(
     )
 
     meta = MediaMeta(
-        title=title,
+        title=params.title,
         provider=provider_name,
         mediaType=mediaType,
         tmdbId=tmdbId or None,

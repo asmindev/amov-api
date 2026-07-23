@@ -34,7 +34,7 @@ async def decrypt(client: httpx.AsyncClient, ciphertext: str, tmdb_id: str, seed
             expanded.append(src)
 
     for src in expanded:
-        src["quality"] = normalize_quality(src["quality"])
+        src["quality"] = normalize_quality(src["quality"], src.get("url", ""))
 
     expanded.sort(key=lambda s: quality_sort_key(s["quality"]))
     result["sources"] = expanded
