@@ -21,8 +21,13 @@ async def do_proxy_stream(
     """Core proxy logic shared by /proxy and DASH segment middleware."""
     proxy_headers = get_domain_headers(target_url) or build_default_headers()
 
+    u_lower = target_url.lower()
+    is_subtitle_or_text = any(
+        ext in u_lower for ext in (".srt", ".vtt", ".txt", ".json", ".xml", "subtitle", "subt")
+    )
+
     range_header = request.headers.get("range")
-    if range_header:
+    if range_header and not is_subtitle_or_text:
         proxy_headers["Range"] = range_header
 
     if extra_headers_json.strip():
@@ -41,6 +46,16 @@ async def do_proxy_stream(
         raise HTTPException(status_code=504, detail="Upstream timeout connecting to stream")
     except httpx.RequestError as e:
         raise HTTPException(status_code=502, detail=f"Upstream connection error: {e}")
+
+    # Fallback: if upstream CDN rejected Range header for subtitles/text files with 416
+    if resp.status_code == 416 and "Range" in proxy_headers:
+        await resp.aclose()
+        proxy_headers.pop("Range", None)
+        req = client.build_request("GET", target_url, headers=proxy_headers)
+        try:
+            resp = await client.send(req, stream=True, follow_redirects=True)
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"Upstream error retry: {e}")
 
     if resp.status_code == 403:
         await resp.aclose()
@@ -67,7 +82,9 @@ async def do_proxy_stream(
         "Accept-Ranges": "bytes",
         "Cache-Control": "public, max-age=3600",
     }
-    if resp.headers.get("content-length"):
+    # Only send Content-Length for Partial Content (206) to prevent Uvicorn "Response content shorter than Content-Length"
+    # when chunked streaming finishes early or times out.
+    if resp.status_code == 206 and resp.headers.get("content-length"):
         res_headers["Content-Length"] = resp.headers["content-length"]
     if resp.headers.get("content-range"):
         res_headers["Content-Range"] = resp.headers["content-range"]
