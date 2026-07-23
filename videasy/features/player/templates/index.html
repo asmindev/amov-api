@@ -3,199 +3,199 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Videasy Decryptor</title>
+  <title>Videasy & Moviebox Decryptor</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            dark: { 950: '#0a0a0f', 900: '#0d0d14', 800: '#111118', 700: '#1a1a24' },
+            dark: { 950: '#0a0a0f', 900: '#0d0d14', 800: '#111118', 700: '#1a1a24' }
           }
         }
       }
     }
   </script>
 </head>
-<body class="bg-dark-950 text-slate-200 leading-relaxed font-sans">
-  <!-- Nav -->
-  <nav class="flex items-center justify-between px-7 py-3.5 border-b border-white/5 bg-dark-950/80 backdrop-blur-sm sticky top-0 z-50">
-    <div class="font-bold text-sm tracking-tight">▶ <span class="text-blue-400">videasy</span> decryptor</div>
-    <div class="flex gap-5 max-sm:hidden">
-      <a href="#try" class="text-slate-400 text-sm hover:text-slate-200 transition">Try it</a>
-      <a href="#moviebox" class="text-slate-400 text-sm hover:text-slate-200 transition">Moviebox</a>
-      <a href="#endpoints" class="text-slate-400 text-sm hover:text-slate-200 transition">Endpoints</a>
-      <a href="/player" target="_blank" class="text-slate-400 text-sm hover:text-slate-200 transition">Player</a>
-      <a href="/docs" target="_blank" class="text-slate-400 text-sm hover:text-slate-200 transition">OpenAPI</a>
+<body class="bg-dark-950 text-slate-200 leading-relaxed font-sans min-h-screen">
+  <!-- Navigation -->
+  <nav class="flex items-center justify-between px-8 py-4 border-b border-white/10 bg-dark-950/80 backdrop-blur-md sticky top-0 z-50">
+    <div class="font-bold text-base tracking-tight flex items-center gap-2">
+      <span class="inline-block w-3 h-3 rounded-full bg-blue-500 animate-pulse"></span>
+      <span class="text-blue-400">videasy</span> & <span class="text-emerald-400">moviebox</span> decryptor
+    </div>
+    <div class="flex gap-6 max-sm:hidden text-sm">
+      <a href="#try-sources" class="text-slate-400 hover:text-white transition">Videasy</a>
+      <a href="#try-moviebox" class="text-slate-400 hover:text-white transition">Moviebox</a>
+      <a href="#try-search" class="text-slate-400 hover:text-white transition">Search</a>
+      <a href="#endpoints" class="text-slate-400 hover:text-white transition">API Endpoints</a>
+      <a href="/player" target="_blank" class="text-blue-400 hover:text-blue-300 font-semibold transition">▶ Web Player</a>
+      <a href="/docs" target="_blank" class="text-slate-400 hover:text-white transition">Swagger Docs</a>
     </div>
   </nav>
 
-  <!-- Hero -->
-  <div class="text-center py-16 px-6 pb-10">
-    <h1 class="text-[clamp(2rem,5vw,3.2rem)] font-extrabold tracking-tight mb-2.5"><span class="text-blue-400">videasy</span> decryptor</h1>
-    <p class="text-slate-400 text-base max-w-[500px] mx-auto">Pick a provider, get HLS streams + subtitles.</p>
+  <!-- Hero Section -->
+  <div class="text-center py-12 px-6">
+    <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-3">
+      <span class="bg-gradient-to-r from-blue-400 via-indigo-300 to-emerald-400 bg-clip-text text-transparent">Videasy & Moviebox</span> Decryptor
+    </h1>
+    <p class="text-slate-400 text-base max-w-xl mx-auto">
+      Decrypt video streams, fetch CDN captions, and resolve media metadata across Wingsdatabase providers and Moviebox.
+    </p>
   </div>
 
-  <div class="max-w-[800px] mx-auto px-6 pb-16">
-    <!-- Try It Card -->
-    <div class="bg-dark-800 border border-white/5 rounded-xl p-6 mb-5" id="try">
-      <span class="text-[0.75rem] uppercase tracking-widest text-slate-500 font-semibold mb-4 block">Try it now</span>
-      <div class="flex gap-3 flex-wrap mb-3.5 items-end">
-        <div class="flex-1 min-w-[140px]">
-          <label class="block text-[0.72rem] uppercase tracking-wider text-slate-500 font-semibold mb-1">tmdbId</label>
-          <input id="tmdb" value="157336" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-[0.82rem] outline-none focus:border-blue-400 transition">
+  <div class="max-w-4xl mx-auto px-6 pb-20 space-y-8">
+
+    <!-- 1. Videasy Provider Card -->
+    <div class="bg-dark-800/90 border border-white/10 rounded-2xl p-6 shadow-2xl backdrop-blur-md" id="try-sources">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xs uppercase tracking-widest text-blue-400 font-bold">1. Videasy / Wingsdatabase Decryptor</h2>
+        <span class="text-xs text-slate-500 font-mono">GET /sources</span>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <div>
+          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">tmdbId</label>
+          <input id="tmdb" value="157336" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-blue-400 transition">
         </div>
-        <div class="flex-1 min-w-[140px]">
-          <label class="block text-[0.72rem] uppercase tracking-wider text-slate-500 font-semibold mb-1">title</label>
-          <input id="title" value="Interstellar" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-[0.82rem] outline-none focus:border-blue-400 transition">
+        <div>
+          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">title</label>
+          <input id="title" value="Interstellar" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-blue-400 transition">
         </div>
-        <div class="flex-[0.7] min-w-[100px]">
-          <label class="block text-[0.72rem] uppercase tracking-wider text-slate-500 font-semibold mb-1">year</label>
-          <input id="year" value="2014" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-[0.82rem] outline-none focus:border-blue-400 transition">
+        <div>
+          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">year</label>
+          <input id="year" value="2014" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-blue-400 transition">
         </div>
-        <div class="flex-[0.7] min-w-[100px]">
-          <label class="block text-[0.72rem] uppercase tracking-wider text-slate-500 font-semibold mb-1">type</label>
-          <select id="type" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-[0.82rem] outline-none focus:border-blue-400 transition">
-            <option value="movie" selected>movie</option><option value="tv">tv</option>
+        <div>
+          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">mediaType</label>
+          <select id="type" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-blue-400 transition">
+            <option value="movie" selected>movie</option>
+            <option value="tv">tv</option>
           </select>
         </div>
       </div>
-      <div class="flex gap-3 flex-wrap mb-3.5 items-end">
-        <div class="flex-[0.6] min-w-[100px]">
-          <label class="block text-[0.72rem] uppercase tracking-wider text-slate-500 font-semibold mb-1">season</label>
-          <input id="season" value="1" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-[0.82rem] outline-none focus:border-blue-400 transition">
+
+      <div class="grid grid-cols-3 gap-3 mb-4">
+        <div>
+          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">seasonId</label>
+          <input id="season" value="1" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-blue-400 transition">
         </div>
-        <div class="flex-[0.6] min-w-[100px]">
-          <label class="block text-[0.72rem] uppercase tracking-wider text-slate-500 font-semibold mb-1">episode</label>
-          <input id="episode" value="1" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-[0.82rem] outline-none focus:border-blue-400 transition">
+        <div>
+          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">episodeId</label>
+          <input id="episode" value="1" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-blue-400 transition">
         </div>
-        <div class="flex-[0.7] min-w-[100px]">
-          <label class="block text-[0.72rem] uppercase tracking-wider text-slate-500 font-semibold mb-1">imdbId</label>
-          <input id="imdb" value="tt0816692" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-[0.82rem] outline-none focus:border-blue-400 transition">
-        </div>
-      </div>
-      <div class="mb-3">
-        <label class="block text-[0.72rem] uppercase tracking-wider text-slate-500 font-semibold mb-1.5">Provider</label>
-        <div class="flex gap-1.5 flex-wrap" id="provider-group">
-          <button class="prov-btn px-4 py-1.5 border border-blue-400 text-blue-400 bg-blue-400/10 rounded-lg text-[0.82rem] font-medium transition" data-provider="Yoru">Yoru</button>
-          <button class="prov-btn px-4 py-1.5 border border-white/10 text-slate-400 bg-transparent rounded-lg text-[0.82rem] font-medium transition hover:border-blue-400 hover:text-slate-200 hover:bg-blue-400/5" data-provider="Neon">Neon</button>
-          <button class="prov-btn px-4 py-1.5 border border-white/10 text-slate-400 bg-transparent rounded-lg text-[0.82rem] font-medium transition hover:border-blue-400 hover:text-slate-200 hover:bg-blue-400/5" data-provider="Cypher">Cypher</button>
-          <button class="prov-btn px-4 py-1.5 border border-white/10 text-slate-400 bg-transparent rounded-lg text-[0.82rem] font-medium transition hover:border-blue-400 hover:text-slate-200 hover:bg-blue-400/5" data-provider="Breach">Breach</button>
+        <div>
+          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">imdbId</label>
+          <input id="imdb" value="tt0816692" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-blue-400 transition">
         </div>
       </div>
-      <div class="flex items-center gap-3 flex-wrap">
-        <button id="fetch-btn" onclick="fetchSources()" class="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-semibold text-sm hover:bg-blue-700 transition whitespace-nowrap">Fetch sources</button>
-        <button class="px-5 py-2.5 bg-slate-800 text-slate-400 rounded-lg font-semibold text-sm hover:bg-slate-700 hover:text-slate-200 transition whitespace-nowrap" id="play-btn" onclick="openPlayer()" style="display:none">▶ Play in Player</button>
-        <select id="sub-source" class="max-w-[140px] px-3 py-1.5 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-[0.82rem] outline-none">
-          <option value="opensubtitles">OpenSubtitles</option>
-          <option value="yoru">Yoru</option>
-          <option value="neon">Neon</option>
-          <option value="cypher">Cypher</option>
-          <option value="breach">Breach</option>
-        </select>
-        <button id="fetch-sub-btn" onclick="fetchSubtitles()" class="px-5 py-2.5 bg-slate-800 text-slate-400 rounded-lg font-semibold text-sm hover:bg-slate-700 hover:text-slate-200 transition whitespace-nowrap">💬 Fetch Subs</button>
-        <select id="os-dropdown" style="display:none" onchange="copyOsLink(this)" class="flex-1 max-w-[200px] px-3 py-1.5 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-[0.82rem] outline-none">
-          <option value="">-- Select Subtitle --</option>
-        </select>
-        <span class="text-slate-500 text-[0.75rem] font-mono" id="req-url"></span>
+
+      <div class="mb-4">
+        <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-2">Provider Selection</label>
+        <div class="flex gap-2 flex-wrap" id="provider-group">
+          <button class="prov-btn px-4 py-1.5 border border-blue-400 text-blue-400 bg-blue-400/10 rounded-lg text-xs font-semibold transition" data-provider="Yoru">Yoru</button>
+          <button class="prov-btn px-4 py-1.5 border border-white/10 text-slate-400 bg-transparent rounded-lg text-xs font-semibold transition hover:border-blue-400 hover:text-slate-200" data-provider="Neon">Neon</button>
+          <button class="prov-btn px-4 py-1.5 border border-white/10 text-slate-400 bg-transparent rounded-lg text-xs font-semibold transition hover:border-blue-400 hover:text-slate-200" data-provider="Cypher">Cypher</button>
+          <button class="prov-btn px-4 py-1.5 border border-white/10 text-slate-400 bg-transparent rounded-lg text-xs font-semibold transition hover:border-blue-400 hover:text-slate-200" data-provider="Breach">Breach</button>
+        </div>
       </div>
-      <div id="status" class="mt-3"></div>
-      <pre id="output" class="mt-3 bg-dark-900 border border-white/5 rounded-lg p-4 font-mono text-[0.78rem] overflow-x-auto leading-relaxed min-h-[60px] text-slate-400 whitespace-pre-wrap">Response will appear here</pre>
+
+      <div class="flex items-center gap-3 flex-wrap pt-2 border-t border-white/5">
+        <button onclick="fetchSources()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-lg transition shadow-lg shadow-blue-500/20">Fetch Sources</button>
+        <button id="play-btn" onclick="openPlayer()" style="display:none" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm rounded-lg transition shadow-lg shadow-emerald-500/20">▶ Play in Player</button>
+        <span id="req-url" class="text-slate-500 text-xs font-mono ml-auto"></span>
+      </div>
+
+      <div id="status" class="mt-4"></div>
+      <pre id="output" class="mt-3 bg-dark-900 border border-white/5 rounded-xl p-4 font-mono text-xs overflow-x-auto min-h-[60px] text-slate-300 leading-relaxed">Response will appear here...</pre>
     </div>
 
-    <!-- Endpoints Card -->
-    <div class="bg-dark-800 border border-white/5 rounded-xl p-6 mb-5" id="endpoints">
-      <span class="text-[0.75rem] uppercase tracking-widest text-slate-500 font-semibold mb-4 block">Endpoints</span>
-      <div class="flex items-center gap-3 px-4 py-3 rounded-lg bg-dark-900 font-mono text-[0.82rem] mb-1 hover:bg-dark-800 transition">
-        <span class="px-2 py-0.5 rounded text-[0.7rem] font-bold tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">GET</span>
-        <code>/sources</code>
-        <span class="text-slate-500 font-sans text-[0.82rem] ml-auto">Fetch decrypted streams</span>
+    <!-- 2. Moviebox Card -->
+    <div class="bg-dark-800/90 border border-white/10 rounded-2xl p-6 shadow-2xl backdrop-blur-md" id="try-moviebox">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xs uppercase tracking-widest text-emerald-400 font-bold">2. Moviebox Decryptor & Reverse Lookup</h2>
+        <span class="text-xs text-slate-500 font-mono">GET /moviebox/sources</span>
       </div>
-      <div class="flex items-center gap-3 px-4 py-3 rounded-lg bg-dark-900 font-mono text-[0.82rem] mb-1 hover:bg-dark-800 transition">
-        <span class="px-2 py-0.5 rounded text-[0.7rem] font-bold tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">GET</span>
-        <code>/moviebox/sources</code>
-        <span class="text-slate-500 font-sans text-[0.82rem] ml-auto">Fetch Moviebox sources</span>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        <div>
+          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">imdbId (Reverse Lookup)</label>
+          <input id="mb-imdb" value="tt9018736" placeholder="tt9018736" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
+        </div>
+        <div>
+          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">subjectId (Optional)</label>
+          <input id="mb-subject" value="7850278583678682192" placeholder="7850278583678682192" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
+        </div>
+        <div>
+          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">Full Moviebox URL (Optional)</label>
+          <input id="mb-url" value="" placeholder="https://themoviebox.xyz/movies/..." class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
+        </div>
       </div>
-      <div class="flex items-center gap-3 px-4 py-3 rounded-lg bg-dark-900 font-mono text-[0.82rem] mb-1 hover:bg-dark-800 transition">
-        <span class="px-2 py-0.5 rounded text-[0.7rem] font-bold tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">GET</span>
-        <code>/providers</code>
-        <span class="text-slate-500 font-sans text-[0.82rem] ml-auto">List providers</span>
+
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div>
+          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">seasonId (TV Only)</label>
+          <input id="mb-season" value="1" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
+        </div>
+        <div>
+          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">episodeId (TV Only)</label>
+          <input id="mb-episode" value="1" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
+        </div>
       </div>
-      <div class="flex items-center gap-3 px-4 py-3 rounded-lg bg-dark-900 font-mono text-[0.82rem] mb-1 hover:bg-dark-800 transition">
-        <span class="px-2 py-0.5 rounded text-[0.7rem] font-bold tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">GET</span>
-        <code>/player</code>
-        <span class="text-slate-500 font-sans text-[0.82rem] ml-auto">Video player with HLS/MP4 support</span>
+
+      <div class="flex items-center gap-3 flex-wrap pt-2 border-t border-white/5">
+        <button onclick="fetchMoviebox()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm rounded-lg transition shadow-lg shadow-emerald-500/20">Fetch Moviebox Sources</button>
+        <button id="mb-play-btn" onclick="openMbPlayer()" style="display:none" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-lg transition shadow-lg shadow-blue-500/20">▶ Play in Player</button>
+        <span id="mb-req-url" class="text-slate-500 text-xs font-mono ml-auto"></span>
       </div>
-      <div class="flex items-center gap-3 px-4 py-3 rounded-lg bg-dark-900 font-mono text-[0.82rem] hover:bg-dark-800 transition">
-        <span class="px-2 py-0.5 rounded text-[0.7rem] font-bold tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">GET</span>
-        <code>/health</code>
-        <span class="text-slate-500 font-sans text-[0.82rem] ml-auto">Health check</span>
-      </div>
+
+      <div id="mb-status" class="mt-4"></div>
+      <pre id="mb-output" class="mt-3 bg-dark-900 border border-white/5 rounded-xl p-4 font-mono text-xs overflow-x-auto min-h-[60px] text-slate-300 leading-relaxed">Response will appear here...</pre>
     </div>
 
-    <!-- Quick Links Card -->
-    <div class="bg-dark-800 border border-white/5 rounded-xl p-6 mb-5">
-      <span class="text-[0.75rem] uppercase tracking-widest text-slate-500 font-semibold mb-3 block">Quick links</span>
-      <div class="flex flex-wrap gap-2 mt-3">
-        <a class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-dark-700 border border-white/5 rounded-lg text-slate-400 text-[0.82rem] transition hover:border-blue-400 hover:text-slate-200 hover:bg-blue-400/5 cursor-pointer" href="/sources?tmdbId=157336&mediaType=movie&title=Interstellar&year=2014&imdbId=tt0816692&provider=Yoru" target="_blank">
-          Interstellar <span class="text-blue-400 font-semibold">Yoru</span>
-        </a>
-        <a class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-dark-700 border border-white/5 rounded-lg text-slate-400 text-[0.82rem] transition hover:border-blue-400 hover:text-slate-200 hover:bg-blue-400/5 cursor-pointer" href="/sources?tmdbId=157336&mediaType=movie&title=Interstellar&year=2014&imdbId=tt0816692&provider=Neon" target="_blank">
-          Interstellar <span class="text-blue-400 font-semibold">Neon</span>
-        </a>
-        <a class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-dark-700 border border-white/5 rounded-lg text-slate-400 text-[0.82rem] transition hover:border-blue-400 hover:text-slate-200 hover:bg-blue-400/5 cursor-pointer" href="/sources?tmdbId=27205&mediaType=movie&title=Inception&year=2010&imdbId=tt1375666&provider=Yoru" target="_blank">
-          Inception <span class="text-blue-400 font-semibold">Yoru</span>
-        </a>
-        <a class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-dark-700 border border-white/5 rounded-lg text-slate-400 text-[0.82rem] transition hover:border-blue-400 hover:text-slate-200 hover:bg-blue-400/5 cursor-pointer" href="/sources?tmdbId=1396&mediaType=tv&title=Breaking+Bad&year=2008&seasonId=1&episodeId=1&provider=Yoru" target="_blank">
-          Breaking Bad S1E1 <span class="text-blue-400 font-semibold">Yoru</span>
-        </a>
-        <a class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-dark-700 border border-white/5 rounded-lg text-slate-400 text-[0.82rem] transition hover:border-blue-400 hover:text-slate-200 hover:bg-blue-400/5 cursor-pointer" href="/sources?tmdbId=66732&mediaType=tv&title=Stranger+Things&year=2016&seasonId=1&episodeId=1&provider=Neon" target="_blank">
-          Stranger Things S1E1 <span class="text-blue-400 font-semibold">Neon</span>
-        </a>
+    <!-- 3. Moviebox Search Card -->
+    <div class="bg-dark-800/90 border border-white/10 rounded-2xl p-6 shadow-2xl backdrop-blur-md" id="try-search">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xs uppercase tracking-widest text-indigo-400 font-bold">3. Moviebox Search Tester</h2>
+        <span class="text-xs text-slate-500 font-mono">GET /moviebox/search</span>
       </div>
+
+      <div class="flex gap-3 mb-4">
+        <input id="search-q" value="Avatar" placeholder="Search title..." class="flex-1 px-4 py-2.5 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-sm outline-none focus:border-indigo-400 transition">
+        <button onclick="searchMoviebox()" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm rounded-lg transition shadow-lg shadow-indigo-500/20">Search</button>
+      </div>
+
+      <div id="search-status"></div>
+      <div id="search-results" class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3"></div>
     </div>
 
-    <!-- Moviebox Card -->
-    <div class="bg-dark-800 border border-white/5 rounded-xl p-6 mb-5" id="moviebox">
-      <span class="text-[0.75rem] uppercase tracking-widest text-slate-500 font-semibold mb-4 block">Moviebox</span>
-      <div class="flex gap-3 flex-wrap mb-3.5 items-end">
-        <div class="flex-[2] min-w-[200px]">
-          <label class="block text-[0.72rem] uppercase tracking-wider text-slate-500 font-semibold mb-1">URL / Slug / Subject ID</label>
-          <input id="mb-input" value="https://themoviebox.xyz/movies/check-out-sekarang-pay-later-caper-QMd0JfnG5U9?id=8313012068559605176" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-[0.82rem] outline-none focus:border-blue-400 transition">
+    <!-- 4. Endpoints Overview -->
+    <div class="bg-dark-800/90 border border-white/10 rounded-2xl p-6 shadow-2xl backdrop-blur-md" id="endpoints">
+      <h2 class="text-xs uppercase tracking-widest text-slate-400 font-bold mb-4">API Endpoints Overview</h2>
+      <div class="space-y-2 font-mono text-xs">
+        <div class="flex items-center justify-between p-3 rounded-lg bg-dark-900 border border-white/5">
+          <span class="text-emerald-400 font-bold">GET /sources</span>
+          <span class="text-slate-400">Videasy decrypted streams (Yoru, Neon, Cypher, Breach)</span>
         </div>
-        <div class="flex-1 min-w-[150px]">
-          <label class="block text-[0.72rem] uppercase tracking-wider text-slate-500 font-semibold mb-1">Cookie (Optional)</label>
-          <input id="mb-cookie" value="" placeholder="mb_token=...; token=..." class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-[0.82rem] outline-none focus:border-blue-400 transition">
+        <div class="flex items-center justify-between p-3 rounded-lg bg-dark-900 border border-white/5">
+          <span class="text-emerald-400 font-bold">GET /moviebox/sources</span>
+          <span class="text-slate-400">Moviebox MP4 & DASH streams + CDN captions</span>
         </div>
-        <div class="flex-[0.4] min-w-[80px]">
-          <label class="block text-[0.72rem] uppercase tracking-wider text-slate-500 font-semibold mb-1">type</label>
-          <select id="mb-type" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-[0.82rem] outline-none focus:border-blue-400 transition">
-            <option value="movie" selected>movie</option><option value="tv">tv</option>
-          </select>
+        <div class="flex items-center justify-between p-3 rounded-lg bg-dark-900 border border-white/5">
+          <span class="text-emerald-400 font-bold">GET /moviebox/search</span>
+          <span class="text-slate-400">Search Moviebox title catalog</span>
         </div>
-      </div>
-      <div class="flex items-center gap-3 flex-wrap">
-        <button onclick="fetchMoviebox()" class="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-semibold text-sm hover:bg-blue-700 transition whitespace-nowrap">Fetch Moviebox sources</button>
-        <button class="px-5 py-2.5 bg-slate-800 text-slate-400 rounded-lg font-semibold text-sm hover:bg-slate-700 hover:text-slate-200 transition whitespace-nowrap" id="mb-play-btn" onclick="openMbPlayer()" style="display:none">▶ Play in Player</button>
-        <span class="text-slate-500 text-[0.75rem] font-mono" id="mb-req-url"></span>
-      </div>
-      <div id="mb-status" class="mt-3"></div>
-      <pre id="mb-output" class="mt-3 bg-dark-900 border border-white/5 rounded-lg p-4 font-mono text-[0.78rem] overflow-x-auto leading-relaxed min-h-[60px] text-slate-400 whitespace-pre-wrap">Response will appear here</pre>
-      <div class="flex flex-wrap gap-2 mt-3">
-        <a class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-dark-700 border border-white/5 rounded-lg text-slate-400 text-[0.82rem] transition hover:border-blue-400 hover:text-slate-200 hover:bg-blue-400/5 cursor-pointer" onclick="setMbInput('https://themoviebox.xyz/movies/check-out-sekarang-pay-later-caper-QMd0JfnG5U9?id=8313012068559605176'); fetchMoviebox();">
-          Check Out Sekarang <span class="text-blue-400 font-semibold">Moviebox</span>
-        </a>
+        <div class="flex items-center justify-between p-3 rounded-lg bg-dark-900 border border-white/5">
+          <span class="text-blue-400 font-bold">GET /player</span>
+          <span class="text-slate-400">Interactive HTML5 Web Player</span>
+        </div>
+        <div class="flex items-center justify-between p-3 rounded-lg bg-dark-900 border border-white/5">
+          <span class="text-indigo-400 font-bold">GET /proxy</span>
+          <span class="text-slate-400">Stream CORS proxy & DASH .m4s segment wrapper</span>
+        </div>
       </div>
     </div>
 
-    <!-- Providers Card -->
-    <div class="bg-dark-800 border border-white/5 rounded-xl p-6">
-      <span class="text-[0.75rem] uppercase tracking-widest text-slate-500 font-semibold mb-3 block">Providers</span>
-      <div class="flex items-center gap-3 flex-wrap">
-        {{ provider_badges }}
-      </div>
-      <div class="text-slate-500 text-[0.82rem] mt-3">Try each provider if one fails — availability varies per title.</div>
-    </div>
   </div>
 
   <script>
@@ -204,9 +204,9 @@
     document.querySelectorAll('.prov-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.prov-btn').forEach(b => {
-          b.className = 'prov-btn px-4 py-1.5 border border-white/10 text-slate-400 bg-transparent rounded-lg text-[0.82rem] font-medium transition hover:border-blue-400 hover:text-slate-200 hover:bg-blue-400/5';
+          b.className = 'prov-btn px-4 py-1.5 border border-white/10 text-slate-400 bg-transparent rounded-lg text-xs font-semibold transition hover:border-blue-400 hover:text-slate-200';
         });
-        btn.className = 'prov-btn px-4 py-1.5 border border-blue-400 text-blue-400 bg-blue-400/10 rounded-lg text-[0.82rem] font-medium transition';
+        btn.className = 'prov-btn px-4 py-1.5 border border-blue-400 text-blue-400 bg-blue-400/10 rounded-lg text-xs font-semibold transition';
         activeProvider = btn.dataset.provider;
       });
     });
@@ -231,6 +231,7 @@
     }
 
     let lastSources = null;
+    let lastSubs = null;
 
     async function fetchSources() {
       const tmdb = document.getElementById('tmdb').value.trim();
@@ -258,31 +259,33 @@
       const statusDiv = document.getElementById('status');
       const output = document.getElementById('output');
       const playBtn = document.getElementById('play-btn');
-      statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-lg text-[0.82rem] mb-3.5 bg-blue-500/5 border border-blue-500/15 text-blue-300';
+      statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs mb-3.5 bg-blue-500/10 border border-blue-500/20 text-blue-300';
       statusDiv.innerHTML = '<span class="inline-block w-3.5 h-3.5 border-2 border-blue-500/20 border-t-blue-400 rounded-full animate-spin"></span> Fetching from ' + activeProvider + '...';
       output.textContent = '';
       playBtn.style.display = 'none';
       lastSources = null;
+      lastSubs = null;
 
       try {
         const resp = await fetch(url);
         const data = await resp.json();
         if (resp.ok) {
-          statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-lg text-[0.82rem] mb-3.5 bg-emerald-500/5 border border-emerald-500/15 text-emerald-400';
-          const count = data.data?.sources?.length || 0;
-          const subCount = data.data?.subtitles?.length || 0;
-          statusDiv.innerHTML = '✓ ' + activeProvider + ' — ' + count + ' source' + (count !== 1 ? 's' : '') + ', ' + subCount + ' subtitle' + (subCount !== 1 ? 's' : '');
-          if (count > 0) {
-            lastSources = data.data.sources;
+          statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs mb-3.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300';
+          const sourcesList = data.sources || data.data?.sources || [];
+          const subsList = data.subtitles || data.data?.subtitles || [];
+          statusDiv.innerHTML = '✓ ' + activeProvider + ' — ' + sourcesList.length + ' source(s), ' + subsList.length + ' subtitle(s)';
+          if (sourcesList.length > 0) {
+            lastSources = sourcesList;
+            lastSubs = subsList;
             playBtn.style.display = 'inline-block';
           }
         } else {
-          statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-lg text-[0.82rem] mb-3.5 bg-red-500/5 border border-red-500/15 text-red-300';
+          statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs mb-3.5 bg-red-500/10 border border-red-500/20 text-red-300';
           statusDiv.textContent = '✗ ' + (data.detail || data.error || 'Unknown error');
         }
         output.innerHTML = jsonHighlight(data);
       } catch (e) {
-        statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-lg text-[0.82rem] mb-3.5 bg-red-500/5 border border-red-500/15 text-red-300';
+        statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs mb-3.5 bg-red-500/10 border border-red-500/20 text-red-300';
         statusDiv.textContent = '✗ ' + e.message;
         output.textContent = e.message;
       }
@@ -290,106 +293,63 @@
 
     function openPlayer() {
       if (!lastSources || lastSources.length === 0) return;
-      const json = JSON.stringify(lastSources);
-      window.open('/player?sources=' + encodeURIComponent(json), '_blank');
-    }
-
-    async function fetchSubtitles() {
-      const source = document.getElementById('sub-source').value;
-      const tmdb = document.getElementById('tmdb').value.trim();
-      const title = document.getElementById('title').value.trim();
-      const year = document.getElementById('year').value.trim();
-      const type = document.getElementById('type').value;
-      const season = document.getElementById('season').value.trim() || '1';
-      const episode = document.getElementById('episode').value.trim() || '1';
-      const imdb = document.getElementById('imdb').value.trim();
-
-      if (source === 'opensubtitles' && !imdb) {
-        alert("Please fill in imdbId for OpenSubtitles");
-        return;
-      }
-      if (source !== 'opensubtitles' && (!tmdb || !title)) {
-        alert("Please fill in tmdbId and title for " + source);
-        return;
-      }
-
-      const subBtn = document.getElementById('fetch-sub-btn');
-      const osDropdown = document.getElementById('os-dropdown');
-
-      subBtn.innerHTML = '<span class="inline-block w-3.5 h-3.5 border-2 border-blue-500/20 border-t-blue-400 rounded-full animate-spin mr-1.5"></span> Fetching...';
-      subBtn.disabled = true;
-      osDropdown.style.display = 'none';
-      osDropdown.innerHTML = '<option value="">-- Select Subtitle --</option>';
-
-      const params = new URLSearchParams({
-        title, mediaType: type, tmdbId: tmdb,
-        ...(year && {year}), ...(type === 'tv' && {seasonId: season, episodeId: episode}),
-        ...(imdb && {imdbId: imdb})
-      });
-
-      try {
-        const resp = await fetch('/subtitles/' + source + '?' + params.toString());
-        const data = await resp.json();
-        if (resp.ok && data.subtitles && data.subtitles.length > 0) {
-          data.subtitles.forEach(sub => {
-            const opt = document.createElement('option');
-            opt.value = sub.url;
-            opt.textContent = sub.language;
-            osDropdown.appendChild(opt);
-          });
-          osDropdown.style.display = 'block';
-          subBtn.innerHTML = '💬 Subs (' + data.subtitles.length + ')';
-        } else {
-          subBtn.innerHTML = '💬 No Subs found';
-        }
-      } catch (e) {
-        subBtn.innerHTML = '💬 Error';
-      }
-      subBtn.disabled = false;
+      const srcJson = JSON.stringify(lastSources);
+      const subJson = lastSubs ? JSON.stringify(lastSubs) : '';
+      window.open('/player?sources=' + encodeURIComponent(srcJson) + (subJson ? '&subtitles=' + encodeURIComponent(subJson) : ''), '_blank');
     }
 
     let lastMbSources = null;
-
-    function setMbInput(val) {
-      document.getElementById('mb-input').value = val;
-    }
+    let lastMbSubs = null;
 
     async function fetchMoviebox() {
-      const inputVal = document.getElementById('mb-input').value.trim();
-      const cookieVal = document.getElementById('mb-cookie').value.trim();
-      if (!inputVal) {
-        document.getElementById('mb-output').innerHTML = '<span class="text-slate-500">Fill in URL, slug, or subjectId</span>';
-        return;
-      }
-      const params = new URLSearchParams({ url: inputVal, ...(cookieVal && { cookie: cookieVal }) });
+      const imdbVal = document.getElementById('mb-imdb').value.trim();
+      const subjectVal = document.getElementById('mb-subject').value.trim();
+      const urlVal = document.getElementById('mb-url').value.trim();
+      const season = document.getElementById('mb-season').value.trim() || '1';
+      const episode = document.getElementById('mb-episode').value.trim() || '1';
+
+      const params = new URLSearchParams({
+        ...(imdbVal && { imdbId: imdbVal }),
+        ...(subjectVal && { subjectId: subjectVal }),
+        ...(urlVal && { url: urlVal }),
+        seasonId: season,
+        episodeId: episode
+      });
+
       const url = '/moviebox/sources?' + params.toString();
       document.getElementById('mb-req-url').textContent = 'GET ' + url;
+
       const statusDiv = document.getElementById('mb-status');
       const output = document.getElementById('mb-output');
       const playBtn = document.getElementById('mb-play-btn');
-      statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-lg text-[0.82rem] mb-3.5 bg-blue-500/5 border border-blue-500/15 text-blue-300';
-      statusDiv.innerHTML = '<span class="inline-block w-3.5 h-3.5 border-2 border-blue-500/20 border-t-blue-400 rounded-full animate-spin"></span> Fetching from Moviebox...';
+      statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs mb-3.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300';
+      statusDiv.innerHTML = '<span class="inline-block w-3.5 h-3.5 border-2 border-emerald-500/20 border-t-emerald-400 rounded-full animate-spin"></span> Fetching Moviebox sources...';
       output.textContent = '';
       playBtn.style.display = 'none';
       lastMbSources = null;
+      lastMbSubs = null;
+
       try {
         const resp = await fetch(url);
         const data = await resp.json();
         if (resp.ok) {
-          statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-lg text-[0.82rem] mb-3.5 bg-emerald-500/5 border border-emerald-500/15 text-emerald-400';
-          const count = data.data?.sources?.length || 0;
-          statusDiv.innerHTML = '✓ Moviebox — ' + count + ' source' + (count !== 1 ? 's' : '');
-          if (count > 0) {
-            lastMbSources = data.data.sources;
+          statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs mb-3.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300';
+          const sourcesList = data.sources || data.data?.sources || [];
+          const subsList = data.subtitles || data.data?.subtitles || [];
+          const metaTitle = data.meta?.title ? (data.meta.title + ' • ') : '';
+          statusDiv.innerHTML = '✓ Moviebox — ' + metaTitle + sourcesList.length + ' source(s), ' + subsList.length + ' subtitle(s)';
+          if (sourcesList.length > 0) {
+            lastMbSources = sourcesList;
+            lastMbSubs = subsList;
             playBtn.style.display = 'inline-block';
           }
         } else {
-          statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-lg text-[0.82rem] mb-3.5 bg-red-500/5 border border-red-500/15 text-red-300';
+          statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs mb-3.5 bg-red-500/10 border border-red-500/20 text-red-300';
           statusDiv.textContent = '✗ ' + (data.detail || 'Unknown error');
         }
         output.innerHTML = jsonHighlight(data);
       } catch (e) {
-        statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-lg text-[0.82rem] mb-3.5 bg-red-500/5 border border-red-500/15 text-red-300';
+        statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs mb-3.5 bg-red-500/10 border border-red-500/20 text-red-300';
         statusDiv.textContent = '✗ ' + e.message;
         output.textContent = e.message;
       }
@@ -397,19 +357,48 @@
 
     function openMbPlayer() {
       if (!lastMbSources || lastMbSources.length === 0) return;
-      const json = JSON.stringify(lastMbSources);
-      window.open('/player?sources=' + encodeURIComponent(json), '_blank');
+      const srcJson = JSON.stringify(lastMbSources);
+      const subJson = lastMbSubs ? JSON.stringify(lastMbSubs) : '';
+      window.open('/player?sources=' + encodeURIComponent(srcJson) + (subJson ? '&subtitles=' + encodeURIComponent(subJson) : ''), '_blank');
     }
 
-    function copyOsLink(select) {
-      if(select.value) {
-        navigator.clipboard.writeText(select.value);
-        alert("Subtitle URL copied to clipboard!");
-        select.value = "";
+    async function searchMoviebox() {
+      const q = document.getElementById('search-q').value.trim();
+      if (!q) return;
+      const statusDiv = document.getElementById('search-status');
+      const resultsDiv = document.getElementById('search-results');
+      statusDiv.innerHTML = '<span class="text-xs text-indigo-400">Searching...</span>';
+      resultsDiv.innerHTML = '';
+      try {
+        const resp = await fetch('/moviebox/search?q=' + encodeURIComponent(q));
+        const data = await resp.json();
+        if (resp.ok && data.results) {
+          statusDiv.innerHTML = '<span class="text-xs text-emerald-400">Found ' + data.results.length + ' item(s)</span>';
+          data.results.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'p-3 bg-dark-900 border border-white/5 rounded-xl flex items-center justify-between text-xs hover:border-indigo-400/50 transition cursor-pointer';
+            card.onclick = () => {
+              document.getElementById('mb-subject').value = item.subjectId;
+              document.getElementById('mb-imdb').value = '';
+              document.getElementById('mb-url').value = '';
+              fetchMoviebox();
+            };
+            card.innerHTML = `
+              <div>
+                <div class="font-bold text-white">${item.title} (${item.year || 'N/A'})</div>
+                <div class="text-slate-500 font-mono text-[0.7rem]">${item.genre} • Rating: ${item.imdbRating || 'N/A'}</div>
+              </div>
+              <span class="px-2 py-1 bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 rounded font-mono text-[0.7rem]">Test</span>
+            `;
+            resultsDiv.appendChild(card);
+          });
+        } else {
+          statusDiv.innerHTML = '<span class="text-xs text-red-400">No results found</span>';
+        }
+      } catch (e) {
+        statusDiv.innerHTML = '<span class="text-xs text-red-400">' + e.message + '</span>';
       }
     }
-
-    document.addEventListener('keydown', e => { if (e.key === 'Enter') fetchSources(); });
   </script>
 </body>
 </html>
