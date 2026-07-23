@@ -20,11 +20,12 @@ router = APIRouter(tags=["Moviebox"])
     "/moviebox/sources",
     response_model=UnifiedMediaResponse,
     summary="Fetch sources from Moviebox",
-    description="Fetch video sources from themoviebox.xyz. Provide subjectId, a full URL, or a slug.",
+    description="Fetch video sources from themoviebox.xyz. Provide subjectId, imdbId, a full URL, or a slug.",
 )
 async def moviebox_sources(
     request: Request,
     subjectId: str = Query(default="", min_length=0, description="Moviebox subject ID (numeric)"),
+    imdbId: str = Query(default="", pattern=r"^tt\d+$|^$", description="IMDB ID (e.g. tt9018736)"),
     url: str = Query(default="", min_length=0, description="Full themoviebox.xyz URL"),
     seasonId: str = Query(default="0", pattern=r"^\d+$", description="Season number (TV only, default: 0)"),
     episodeId: str = Query(default="0", pattern=r"^\d+$", description="Episode number (TV only, default: 0)"),
@@ -32,9 +33,9 @@ async def moviebox_sources(
 ) -> UnifiedMediaResponse:
     from videasy.features.moviebox.service import fetch_sources as mb_fetch
 
-    if not subjectId and not url:
-        raise HTTPException(status_code=400, detail="Provide either subjectId or url")
-    input_str = subjectId or url
+    if not subjectId and not url and not imdbId:
+        raise HTTPException(status_code=400, detail="Provide subjectId, imdbId, or url")
+    input_str = subjectId or imdbId or url
     if not input_str.strip():
         raise HTTPException(status_code=400, detail="Empty input")
     try:

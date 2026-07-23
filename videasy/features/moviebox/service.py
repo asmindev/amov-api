@@ -598,6 +598,48 @@ async def resolve_moviebox_imdb_id(
     return ""
 
 
+async def resolve_imdb_to_moviebox(
+    client: httpx.AsyncClient,
+    imdb_id: str,
+) -> tuple[str, str]:
+    """Resolve an IMDB ID (e.g. tt9018736) to Moviebox (subject_id, detail_path)."""
+    if not imdb_id.startswith("tt"):
+        return "", ""
+
+    try:
+        url = f"https://v3-cinemeta.strem.io/meta/series/{imdb_id}.json"
+        r = await client.get(url, timeout=5.0)
+        if r.status_code != 200:
+            url = f"https://v3-cinemeta.strem.io/meta/movie/{imdb_id}.json"
+            r = await client.get(url, timeout=5.0)
+
+        if r.status_code != 200:
+            logger.warning("Reverse IMDB lookup failed for %s", imdb_id)
+            return "", ""
+
+        meta = r.json().get("meta", {})
+        title = meta.get("name", "")
+        year = str(meta.get("year", ""))[:4]
+        media_type = meta.get("type", "movie")
+        subject_type = 2 if media_type == "series" else 1
+
+        if not title:
+            return "", ""
+
+        results = await search_titles(client, title)
+
+        for res in results:
+            if res.get("subjectType") == subject_type and year and res.get("year") == year:
+                return str(res.get("subjectId", "")), str(res.get("detailPath", ""))
+
+        if results:
+            return str(results[0].get("subjectId", "")), str(results[0].get("detailPath", ""))
+    except Exception as exc:
+        logger.warning("moviebox reverse lookup failed: %s", exc)
+
+    return "", ""
+
+
 async def fetch_sources(
     client: httpx.AsyncClient,
     url_or_id: str,
@@ -611,7 +653,7 @@ async def fetch_sources(
     Fetch video sources for a TheMovieBox title.
 
     Args:
-        url_or_id: Numeric subjectId, full themoviebox.xyz URL, or slug.
+        url_or_id: Numeric subjectId, IMDB ID (tt...), full themoviebox.xyz URL, or slug.
         se:        Season number (for TV shows, 0 for movies).
         ep:        Episode number (for TV shows, 0 for movies).
         lang:      Preferred subtitle language code.
@@ -620,6 +662,12 @@ async def fetch_sources(
 
     Returns a dict with metadata and ``sources`` / ``subtitles`` lists.
     """
+    # Reverse lookup if url_or_id is an IMDB ID (starts with tt)
+    if url_or_id.strip().startswith("tt"):
+        sub_id, det_path = await resolve_imdb_to_moviebox(client, url_or_id.strip())
+        if sub_id:
+            url_or_id = sub_id
+
     parsed = parse_moviebox_input(url_or_id)
 
     detail = await fetch_detail(
