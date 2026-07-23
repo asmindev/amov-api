@@ -810,6 +810,17 @@ async def search_titles(
 
     try:
         resp = await client.post(url, json=payload, headers=headers)
+        if resp.status_code == 400:
+            logger.info("Moviebox search received 400 invalid token; refreshing guest token and retrying...")
+            _guest_token[0] = ""
+            token = await ensure_guest_token(client)
+            headers = _build_headers()
+            if token:
+                headers["token"] = token
+                headers["Authorization"] = f"Bearer {token}"
+                headers["Cookie"] = f"i18n_lang=en; token={token}"
+            resp = await client.post(url, json=payload, headers=headers)
+
         resp.raise_for_status()
         data = resp.json()
         if data.get("code") != 0:
