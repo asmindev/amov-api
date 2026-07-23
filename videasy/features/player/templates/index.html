@@ -384,7 +384,8 @@
       const imdb = document.getElementById('m-imdb').value.trim();
 
       const params = new URLSearchParams({
-        tmdbId: tmdb, mediaType: 'movie', title, provider: activeMovieProvider,
+        tmdbId: tmdb, mediaType: 'movie', provider: activeMovieProvider,
+        ...(title && {title}),
         ...(year && {year}), ...(imdb && {imdbId: imdb})
       });
 
@@ -497,8 +498,9 @@
       const imdb = document.getElementById('tv-imdb').value.trim();
 
       const params = new URLSearchParams({
-        tmdbId: tmdb, mediaType: 'tv', title, provider: activeTvProvider,
+        tmdbId: tmdb, mediaType: 'tv', provider: activeTvProvider,
         seasonId: season, episodeId: episode,
+        ...(title && {title}),
         ...(year && {year}), ...(imdb && {imdbId: imdb})
       });
 

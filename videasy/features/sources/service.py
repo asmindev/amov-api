@@ -62,12 +62,37 @@ async def fetch_seed(client: httpx.AsyncClient, cache: SeedCache, tmdb_id: str) 
     return seed
 
 
+async def resolve_title_if_missing(
+    client: httpx.AsyncClient,
+    params: SourceParams,
+) -> str:
+    if params.title and params.title.strip():
+        return params.title.strip()
+
+    if params.imdbId and params.imdbId.startswith("tt"):
+        try:
+            kind = "series" if params.mediaType == "tv" else "movie"
+            url = f"https://v3-cinemeta.strem.io/meta/{kind}/{params.imdbId}.json"
+            r = await client.get(url, timeout=4.0)
+            if r.status_code == 200:
+                name = r.json().get("meta", {}).get("name")
+                if name:
+                    return name
+        except Exception:
+            pass
+
+    return "Media"
+
+
 async def fetch_sources(
     client: httpx.AsyncClient,
     cache: SeedCache,
     provider: Provider,
     params: SourceParams,
 ) -> tuple[str, dict[str, Any]]:
+    if not params.title or not params.title.strip():
+        params.title = await resolve_title_if_missing(client, params)
+
     seed = await fetch_seed(client, cache, params.tmdbId)
     enc_title = quote(quote(params.title, safe=""), safe="")
 

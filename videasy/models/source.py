@@ -30,7 +30,7 @@ class SourceResponse(BaseModel):
 
 
 class SourceParams(BaseModel):
-    title: str = Field(..., min_length=1, description="Media title")
+    title: str = Field(default="", description="Media title")
     mediaType: Literal["movie", "tv"] = Field(..., description="Media type")
     tmdbId: str = Field(..., pattern=r"^\d+$", description="TMDB numerical ID")
     provider: str = Field(..., min_length=1, description="Provider name")
