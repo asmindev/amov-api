@@ -18,205 +18,291 @@
   </script>
 </head>
 <body class="bg-dark-950 text-slate-200 leading-relaxed font-sans min-h-screen">
-  <!-- Navigation -->
+  <!-- Top Navigation Bar -->
   <nav class="flex items-center justify-between px-8 py-4 border-b border-white/10 bg-dark-950/80 backdrop-blur-md sticky top-0 z-50">
     <div class="font-bold text-base tracking-tight flex items-center gap-2">
       <span class="inline-block w-3 h-3 rounded-full bg-blue-500 animate-pulse"></span>
       <span class="text-blue-400">videasy</span> & <span class="text-emerald-400">moviebox</span> decryptor
     </div>
     <div class="flex gap-6 max-sm:hidden text-sm">
-      <a href="#try-sources" class="text-slate-400 hover:text-white transition">Videasy</a>
-      <a href="#try-moviebox" class="text-slate-400 hover:text-white transition">Moviebox</a>
-      <a href="#try-search" class="text-slate-400 hover:text-white transition">Search</a>
-      <a href="#endpoints" class="text-slate-400 hover:text-white transition">API Endpoints</a>
-      <a href="/player" target="_blank" class="text-blue-400 hover:text-blue-300 font-semibold transition">▶ Web Player</a>
+      <a href="/player" target="_blank" class="text-blue-400 hover:text-blue-300 font-semibold transition">▶ Open Web Player</a>
       <a href="/docs" target="_blank" class="text-slate-400 hover:text-white transition">Swagger Docs</a>
     </div>
   </nav>
 
   <!-- Hero Section -->
-  <div class="text-center py-12 px-6">
+  <div class="text-center py-10 px-6">
     <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-3">
       <span class="bg-gradient-to-r from-blue-400 via-indigo-300 to-emerald-400 bg-clip-text text-transparent">Videasy & Moviebox</span> Decryptor
     </h1>
-    <p class="text-slate-400 text-base max-w-xl mx-auto">
-      Decrypt video streams, fetch CDN captions, and resolve media metadata across Wingsdatabase providers and Moviebox.
+    <p class="text-slate-400 text-base max-w-xl mx-auto mb-6">
+      Decrypt video streams, fetch CDN captions, and resolve media metadata. Select a category tab below:
     </p>
+
+    <!-- Top Level Navigation Tabs: MOVIES vs TV SERIES vs SEARCH -->
+    <div class="flex items-center justify-center gap-2 p-1.5 bg-dark-900 border border-white/10 rounded-2xl max-w-xl mx-auto shadow-2xl">
+      <button id="tab-movies-btn" onclick="switchCategory('movies')" class="flex-1 py-3 px-6 rounded-xl text-sm font-extrabold transition bg-blue-600 text-white shadow-lg flex items-center justify-center gap-2">
+        <span>🎬</span> MOVIES
+      </button>
+      <button id="tab-tv-btn" onclick="switchCategory('tv')" class="flex-1 py-3 px-6 rounded-xl text-sm font-extrabold transition text-slate-400 hover:text-white flex items-center justify-center gap-2">
+        <span>📺</span> TV SERIES
+      </button>
+      <button id="tab-search-btn" onclick="switchCategory('search')" class="flex-1 py-3 px-6 rounded-xl text-sm font-extrabold transition text-slate-400 hover:text-white flex items-center justify-center gap-2">
+        <span>🔍</span> SEARCH
+      </button>
+    </div>
   </div>
 
-  <div class="max-w-4xl mx-auto px-6 pb-20 space-y-8">
+  <div class="max-w-4xl mx-auto px-6 pb-20">
 
-    <!-- 1. Videasy Provider Card -->
-    <div class="bg-dark-800/90 border border-white/10 rounded-2xl p-6 shadow-2xl backdrop-blur-md" id="try-sources">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-xs uppercase tracking-widest text-blue-400 font-bold">1. Videasy / Wingsdatabase Decryptor</h2>
-        <span class="text-xs text-slate-500 font-mono">GET /sources</span>
-      </div>
+    <!-- ==================== MOVIES SECTION ==================== -->
+    <div id="section-movies" class="space-y-8">
+      
+      <!-- Movies: Videasy Provider -->
+      <div class="bg-dark-800/90 border border-blue-500/30 rounded-2xl p-6 shadow-2xl backdrop-blur-md">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xs uppercase tracking-widest text-blue-400 font-bold flex items-center gap-2">
+            <span>🎬</span> 1. Videasy / Wingsdatabase (Movie Mode)
+          </h2>
+          <span class="text-xs text-slate-500 font-mono">GET /sources?mediaType=movie</span>
+        </div>
 
-      <!-- Mode Selector: Movie vs TV -->
-      <div class="flex items-center gap-2 mb-5 p-1 bg-dark-900 border border-white/10 rounded-xl w-fit">
-        <button id="v-mode-movie" onclick="setVideasyMode('movie')" class="px-5 py-2 rounded-lg text-xs font-bold transition bg-blue-600 text-white shadow-md">
-          🎬 Movie Mode
-        </button>
-        <button id="v-mode-tv" onclick="setVideasyMode('tv')" class="px-5 py-2 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white">
-          📺 TV Series Mode
-        </button>
-      </div>
-
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-        <div>
-          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">tmdbId</label>
-          <input id="tmdb" value="157336" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-blue-400 transition">
-        </div>
-        <div>
-          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">title</label>
-          <input id="title" value="Interstellar" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-blue-400 transition">
-        </div>
-        <div>
-          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">year</label>
-          <input id="year" value="2014" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-blue-400 transition">
-        </div>
-        <div>
-          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">imdbId</label>
-          <input id="imdb" value="tt0816692" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-blue-400 transition">
-        </div>
-      </div>
-
-      <!-- TV Series Season/Episode Fields (Shown when TV Mode is active) -->
-      <div id="v-tv-fields" style="display:none" class="p-3 bg-purple-950/20 border border-purple-500/20 rounded-xl mb-4">
-        <div class="text-[0.7rem] font-bold text-purple-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-          <span>📺 TV Episode Selector</span>
-        </div>
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           <div>
-            <label class="block text-[0.7rem] uppercase tracking-wider text-purple-400 font-semibold mb-1">seasonId</label>
-            <input id="season" value="1" class="w-full px-3 py-2 bg-dark-700 border border-purple-500/30 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-purple-400 transition">
+            <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">tmdbId</label>
+            <input id="m-tmdb" value="157336" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-blue-400 transition">
           </div>
           <div>
-            <label class="block text-[0.7rem] uppercase tracking-wider text-purple-400 font-semibold mb-1">episodeId</label>
-            <input id="episode" value="1" class="w-full px-3 py-2 bg-dark-700 border border-purple-500/30 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-purple-400 transition">
+            <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">title</label>
+            <input id="m-title" value="Interstellar" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-blue-400 transition">
+          </div>
+          <div>
+            <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">year</label>
+            <input id="m-year" value="2014" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-blue-400 transition">
+          </div>
+          <div>
+            <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">imdbId</label>
+            <input id="m-imdb" value="tt0816692" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-blue-400 transition">
           </div>
         </div>
-      </div>
 
-      <div class="mb-4">
-        <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-2">Provider Selection</label>
-        <div class="flex gap-2 flex-wrap" id="provider-group">
-          <button class="prov-btn px-4 py-1.5 border border-blue-400 text-blue-400 bg-blue-400/10 rounded-lg text-xs font-semibold transition" data-provider="Yoru">Yoru</button>
-          <button class="prov-btn px-4 py-1.5 border border-white/10 text-slate-400 bg-transparent rounded-lg text-xs font-semibold transition hover:border-blue-400 hover:text-slate-200" data-provider="Neon">Neon</button>
-          <button class="prov-btn px-4 py-1.5 border border-white/10 text-slate-400 bg-transparent rounded-lg text-xs font-semibold transition hover:border-blue-400 hover:text-slate-200" data-provider="Cypher">Cypher</button>
-          <button class="prov-btn px-4 py-1.5 border border-white/10 text-slate-400 bg-transparent rounded-lg text-xs font-semibold transition hover:border-blue-400 hover:text-slate-200" data-provider="Breach">Breach</button>
+        <div class="mb-4">
+          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-2">Provider Selection</label>
+          <div class="flex gap-2 flex-wrap" id="m-provider-group">
+            <button class="m-prov-btn px-4 py-1.5 border border-blue-400 text-blue-400 bg-blue-400/10 rounded-lg text-xs font-semibold transition" data-provider="Yoru">Yoru</button>
+            <button class="m-prov-btn px-4 py-1.5 border border-white/10 text-slate-400 bg-transparent rounded-lg text-xs font-semibold transition hover:border-blue-400 hover:text-slate-200" data-provider="Neon">Neon</button>
+            <button class="m-prov-btn px-4 py-1.5 border border-white/10 text-slate-400 bg-transparent rounded-lg text-xs font-semibold transition hover:border-blue-400 hover:text-slate-200" data-provider="Cypher">Cypher</button>
+            <button class="m-prov-btn px-4 py-1.5 border border-white/10 text-slate-400 bg-transparent rounded-lg text-xs font-semibold transition hover:border-blue-400 hover:text-slate-200" data-provider="Breach">Breach</button>
+          </div>
         </div>
+
+        <div class="flex items-center gap-3 flex-wrap pt-2 border-t border-white/5">
+          <button onclick="fetchMovieSources()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-lg transition shadow-lg shadow-blue-500/20">Fetch Movie Sources</button>
+          <button id="m-play-btn" onclick="openMoviePlayer()" style="display:none" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm rounded-lg transition shadow-lg shadow-emerald-500/20">▶ Play Movie</button>
+          <span id="m-req-url" class="text-slate-500 text-xs font-mono ml-auto"></span>
+        </div>
+
+        <div id="m-status" class="mt-4"></div>
+        <pre id="m-output" class="mt-3 bg-dark-900 border border-white/5 rounded-xl p-4 font-mono text-xs overflow-x-auto min-h-[60px] text-slate-300 leading-relaxed">Movie response will appear here...</pre>
       </div>
 
-      <div class="flex items-center gap-3 flex-wrap pt-2 border-t border-white/5">
-        <button onclick="fetchSources()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-lg transition shadow-lg shadow-blue-500/20">Fetch Sources</button>
-        <button id="play-btn" onclick="openPlayer()" style="display:none" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm rounded-lg transition shadow-lg shadow-emerald-500/20">▶ Play in Player</button>
-        <span id="req-url" class="text-slate-500 text-xs font-mono ml-auto"></span>
+      <!-- Movies: Moviebox Provider -->
+      <div class="bg-dark-800/90 border border-emerald-500/30 rounded-2xl p-6 shadow-2xl backdrop-blur-md">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xs uppercase tracking-widest text-emerald-400 font-bold flex items-center gap-2">
+            <span>🎬</span> 2. Moviebox Movie Decryptor
+          </h2>
+          <span class="text-xs text-slate-500 font-mono">GET /moviebox/sources</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+          <div>
+            <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">imdbId (Reverse Lookup)</label>
+            <input id="mb-m-imdb" value="tt33311069" placeholder="tt33311069" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
+          </div>
+          <div>
+            <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">subjectId (Optional)</label>
+            <input id="mb-m-subject" value="4394044471852286152" placeholder="4394044471852286152" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
+          </div>
+          <div>
+            <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">Full Movie URL (Optional)</label>
+            <input id="mb-m-url" value="" placeholder="https://themoviebox.xyz/movies/..." class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 flex-wrap pt-2 border-t border-white/5">
+          <button onclick="fetchMovieboxMovie()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm rounded-lg transition shadow-lg shadow-emerald-500/20">Fetch Moviebox Movie</button>
+          <button id="mb-m-play-btn" onclick="openMbMoviePlayer()" style="display:none" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-lg transition shadow-lg shadow-blue-500/20">▶ Play Movie</button>
+          <span id="mb-m-req-url" class="text-slate-500 text-xs font-mono ml-auto"></span>
+        </div>
+
+        <div id="mb-m-status" class="mt-4"></div>
+        <pre id="mb-m-output" class="mt-3 bg-dark-900 border border-white/5 rounded-xl p-4 font-mono text-xs overflow-x-auto min-h-[60px] text-slate-300 leading-relaxed">Moviebox movie response will appear here...</pre>
       </div>
 
-      <div id="status" class="mt-4"></div>
-      <pre id="output" class="mt-3 bg-dark-900 border border-white/5 rounded-xl p-4 font-mono text-xs overflow-x-auto min-h-[60px] text-slate-300 leading-relaxed">Response will appear here...</pre>
     </div>
 
-    <!-- 2. Moviebox Card -->
-    <div class="bg-dark-800/90 border border-white/10 rounded-2xl p-6 shadow-2xl backdrop-blur-md" id="try-moviebox">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-xs uppercase tracking-widest text-emerald-400 font-bold">2. Moviebox Decryptor & Reverse Lookup</h2>
-        <span class="text-xs text-slate-500 font-mono">GET /moviebox/sources</span>
-      </div>
 
-      <!-- Mode Selector for Moviebox: Movie vs TV -->
-      <div class="flex items-center gap-2 mb-5 p-1 bg-dark-900 border border-white/10 rounded-xl w-fit">
-        <button id="mb-mode-movie" onclick="setMovieboxMode('movie')" class="px-5 py-2 rounded-lg text-xs font-bold transition bg-emerald-600 text-white shadow-md">
-          🎬 Movie Mode
-        </button>
-        <button id="mb-mode-tv" onclick="setMovieboxMode('tv')" class="px-5 py-2 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white">
-          📺 TV Series Mode
-        </button>
-      </div>
+    <!-- ==================== TV SERIES SECTION ==================== -->
+    <div id="section-tv" style="display:none" class="space-y-8">
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-        <div>
-          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">imdbId (Reverse Lookup)</label>
-          <input id="mb-imdb" value="tt33311069" placeholder="tt33311069" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
+      <!-- TV Series: Videasy Provider -->
+      <div class="bg-dark-800/90 border border-purple-500/30 rounded-2xl p-6 shadow-2xl backdrop-blur-md">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xs uppercase tracking-widest text-purple-400 font-bold flex items-center gap-2">
+            <span>📺</span> 1. Videasy / Wingsdatabase (TV Series Mode)
+          </h2>
+          <span class="text-xs text-slate-500 font-mono">GET /sources?mediaType=tv</span>
         </div>
-        <div>
-          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">subjectId (Optional)</label>
-          <input id="mb-subject" value="4394044471852286152" placeholder="4394044471852286152" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
-        </div>
-        <div>
-          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">Full Moviebox URL (Optional)</label>
-          <input id="mb-url" value="" placeholder="https://themoviebox.xyz/movies/..." class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
-        </div>
-      </div>
 
-      <!-- TV Series Season/Episode Fields (Shown when TV Mode is active) -->
-      <div id="mb-tv-fields" style="display:none" class="p-3 bg-emerald-950/20 border border-emerald-500/20 rounded-xl mb-4">
-        <div class="text-[0.7rem] font-bold text-emerald-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-          <span>📺 Moviebox TV Episode Selector</span>
-        </div>
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           <div>
-            <label class="block text-[0.7rem] uppercase tracking-wider text-emerald-400 font-semibold mb-1">seasonId</label>
-            <input id="mb-season" value="1" class="w-full px-3 py-2 bg-dark-700 border border-emerald-500/30 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
+            <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">tmdbId</label>
+            <input id="tv-tmdb" value="1396" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-purple-400 transition">
           </div>
           <div>
-            <label class="block text-[0.7rem] uppercase tracking-wider text-emerald-400 font-semibold mb-1">episodeId</label>
-            <input id="mb-episode" value="1" class="w-full px-3 py-2 bg-dark-700 border border-emerald-500/30 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
+            <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">title</label>
+            <input id="tv-title" value="Breaking Bad" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-purple-400 transition">
+          </div>
+          <div>
+            <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">year</label>
+            <input id="tv-year" value="2008" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-purple-400 transition">
+          </div>
+          <div>
+            <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">imdbId</label>
+            <input id="tv-imdb" value="tt0903747" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-purple-400 transition">
           </div>
         </div>
+
+        <!-- Explicit Season & Episode Selector -->
+        <div class="p-3 bg-purple-950/30 border border-purple-500/30 rounded-xl mb-4">
+          <div class="text-[0.7rem] font-bold text-purple-300 uppercase tracking-wider mb-2">📺 Episode Parameters (Required for TV)</div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[0.7rem] uppercase tracking-wider text-purple-400 font-semibold mb-1">seasonId (Season #)</label>
+              <input id="tv-season" value="1" class="w-full px-3 py-2 bg-dark-700 border border-purple-500/30 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-purple-400 transition">
+            </div>
+            <div>
+              <label class="block text-[0.7rem] uppercase tracking-wider text-purple-400 font-semibold mb-1">episodeId (Episode #)</label>
+              <input id="tv-episode" value="1" class="w-full px-3 py-2 bg-dark-700 border border-purple-500/30 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-purple-400 transition">
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-2">Provider Selection</label>
+          <div class="flex gap-2 flex-wrap" id="tv-provider-group">
+            <button class="tv-prov-btn px-4 py-1.5 border border-purple-400 text-purple-400 bg-purple-400/10 rounded-lg text-xs font-semibold transition" data-provider="Yoru">Yoru</button>
+            <button class="tv-prov-btn px-4 py-1.5 border border-white/10 text-slate-400 bg-transparent rounded-lg text-xs font-semibold transition hover:border-purple-400 hover:text-slate-200" data-provider="Neon">Neon</button>
+            <button class="tv-prov-btn px-4 py-1.5 border border-white/10 text-slate-400 bg-transparent rounded-lg text-xs font-semibold transition hover:border-purple-400 hover:text-slate-200" data-provider="Cypher">Cypher</button>
+            <button class="tv-prov-btn px-4 py-1.5 border border-white/10 text-slate-400 bg-transparent rounded-lg text-xs font-semibold transition hover:border-purple-400 hover:text-slate-200" data-provider="Breach">Breach</button>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 flex-wrap pt-2 border-t border-white/5">
+          <button onclick="fetchTvSources()" class="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-semibold text-sm rounded-lg transition shadow-lg shadow-purple-500/20">Fetch TV Episode</button>
+          <button id="tv-play-btn" onclick="openTvPlayer()" style="display:none" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm rounded-lg transition shadow-lg shadow-emerald-500/20">▶ Play Episode</button>
+          <span id="tv-req-url" class="text-slate-500 text-xs font-mono ml-auto"></span>
+        </div>
+
+        <div id="tv-status" class="mt-4"></div>
+        <pre id="tv-output" class="mt-3 bg-dark-900 border border-white/5 rounded-xl p-4 font-mono text-xs overflow-x-auto min-h-[60px] text-slate-300 leading-relaxed">TV response will appear here...</pre>
       </div>
 
-      <div class="flex items-center gap-3 flex-wrap pt-2 border-t border-white/5">
-        <button onclick="fetchMoviebox()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm rounded-lg transition shadow-lg shadow-emerald-500/20">Fetch Moviebox Sources</button>
-        <button id="mb-play-btn" onclick="openMbPlayer()" style="display:none" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-lg transition shadow-lg shadow-blue-500/20">▶ Play in Player</button>
-        <span id="mb-req-url" class="text-slate-500 text-xs font-mono ml-auto"></span>
+      <!-- TV Series: Moviebox Provider -->
+      <div class="bg-dark-800/90 border border-emerald-500/30 rounded-2xl p-6 shadow-2xl backdrop-blur-md">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xs uppercase tracking-widest text-emerald-400 font-bold flex items-center gap-2">
+            <span>📺</span> 2. Moviebox TV Series Decryptor
+          </h2>
+          <span class="text-xs text-slate-500 font-mono">GET /moviebox/sources</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+          <div>
+            <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">imdbId (Reverse Lookup)</label>
+            <input id="mb-tv-imdb" value="tt9018736" placeholder="tt9018736" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
+          </div>
+          <div>
+            <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">subjectId (Optional)</label>
+            <input id="mb-tv-subject" value="7850278583678682192" placeholder="7850278583678682192" class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
+          </div>
+          <div>
+            <label class="block text-[0.7rem] uppercase tracking-wider text-slate-400 font-semibold mb-1">Full TV URL (Optional)</label>
+            <input id="mb-tv-url" value="" placeholder="https://themoviebox.xyz/tv/..." class="w-full px-3 py-2 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
+          </div>
+        </div>
+
+        <div class="p-3 bg-emerald-950/30 border border-emerald-500/30 rounded-xl mb-4">
+          <div class="text-[0.7rem] font-bold text-emerald-300 uppercase tracking-wider mb-2">📺 Episode Parameters</div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[0.7rem] uppercase tracking-wider text-emerald-400 font-semibold mb-1">seasonId (Season #)</label>
+              <input id="mb-tv-season" value="1" class="w-full px-3 py-2 bg-dark-700 border border-emerald-500/30 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
+            </div>
+            <div>
+              <label class="block text-[0.7rem] uppercase tracking-wider text-emerald-400 font-semibold mb-1">episodeId (Episode #)</label>
+              <input id="mb-tv-episode" value="1" class="w-full px-3 py-2 bg-dark-700 border border-emerald-500/30 rounded-lg text-slate-200 font-mono text-xs outline-none focus:border-emerald-400 transition">
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 flex-wrap pt-2 border-t border-white/5">
+          <button onclick="fetchMovieboxTv()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm rounded-lg transition shadow-lg shadow-emerald-500/20">Fetch Moviebox Episode</button>
+          <button id="mb-tv-play-btn" onclick="openMbTvPlayer()" style="display:none" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-lg transition shadow-lg shadow-blue-500/20">▶ Play Episode</button>
+          <span id="mb-tv-req-url" class="text-slate-500 text-xs font-mono ml-auto"></span>
+        </div>
+
+        <div id="mb-tv-status" class="mt-4"></div>
+        <pre id="mb-tv-output" class="mt-3 bg-dark-900 border border-white/5 rounded-xl p-4 font-mono text-xs overflow-x-auto min-h-[60px] text-slate-300 leading-relaxed">Moviebox TV response will appear here...</pre>
       </div>
 
-      <div id="mb-status" class="mt-4"></div>
-      <pre id="mb-output" class="mt-3 bg-dark-900 border border-white/5 rounded-xl p-4 font-mono text-xs overflow-x-auto min-h-[60px] text-slate-300 leading-relaxed">Response will appear here...</pre>
     </div>
 
-    <!-- 3. Moviebox Search Card -->
-    <div class="bg-dark-800/90 border border-white/10 rounded-2xl p-6 shadow-2xl backdrop-blur-md" id="try-search">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-xs uppercase tracking-widest text-indigo-400 font-bold">3. Moviebox Search Tester</h2>
-        <span class="text-xs text-slate-500 font-mono">GET /moviebox/search</span>
+
+    <!-- ==================== SEARCH CATALOG SECTION ==================== -->
+    <div id="section-search" style="display:none" class="space-y-8">
+      <div class="bg-dark-800/90 border border-indigo-500/30 rounded-2xl p-6 shadow-2xl backdrop-blur-md">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xs uppercase tracking-widest text-indigo-400 font-bold flex items-center gap-2">
+            <span>🔍</span> Moviebox Catalog Search
+          </h2>
+          <span class="text-xs text-slate-500 font-mono">GET /moviebox/search</span>
+        </div>
+
+        <div class="flex gap-3 mb-4">
+          <input id="search-q" value="Avatar" placeholder="Search movie or TV series..." class="flex-1 px-4 py-2.5 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-sm outline-none focus:border-indigo-400 transition">
+          <button onclick="searchMoviebox()" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm rounded-lg transition shadow-lg shadow-indigo-500/20">Search</button>
+        </div>
+
+        <div id="search-status"></div>
+        <div id="search-results" class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3"></div>
       </div>
 
-      <div class="flex gap-3 mb-4">
-        <input id="search-q" value="Avatar" placeholder="Search title..." class="flex-1 px-4 py-2.5 bg-dark-700 border border-white/10 rounded-lg text-slate-200 font-mono text-sm outline-none focus:border-indigo-400 transition">
-        <button onclick="searchMoviebox()" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm rounded-lg transition shadow-lg shadow-indigo-500/20">Search</button>
-      </div>
-
-      <div id="search-status"></div>
-      <div id="search-results" class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3"></div>
-    </div>
-
-    <!-- 4. Endpoints Overview -->
-    <div class="bg-dark-800/90 border border-white/10 rounded-2xl p-6 shadow-2xl backdrop-blur-md" id="endpoints">
-      <h2 class="text-xs uppercase tracking-widest text-slate-400 font-bold mb-4">API Endpoints Overview</h2>
-      <div class="space-y-2 font-mono text-xs">
-        <div class="flex items-center justify-between p-3 rounded-lg bg-dark-900 border border-white/5">
-          <span class="text-emerald-400 font-bold">GET /sources</span>
-          <span class="text-slate-400">Videasy decrypted streams (Yoru, Neon, Cypher, Breach)</span>
-        </div>
-        <div class="flex items-center justify-between p-3 rounded-lg bg-dark-900 border border-white/5">
-          <span class="text-emerald-400 font-bold">GET /moviebox/sources</span>
-          <span class="text-slate-400">Moviebox MP4 & DASH streams + CDN captions</span>
-        </div>
-        <div class="flex items-center justify-between p-3 rounded-lg bg-dark-900 border border-white/5">
-          <span class="text-emerald-400 font-bold">GET /moviebox/search</span>
-          <span class="text-slate-400">Search Moviebox title catalog</span>
-        </div>
-        <div class="flex items-center justify-between p-3 rounded-lg bg-dark-900 border border-white/5">
-          <span class="text-blue-400 font-bold">GET /player</span>
-          <span class="text-slate-400">Interactive HTML5 Web Player</span>
-        </div>
-        <div class="flex items-center justify-between p-3 rounded-lg bg-dark-900 border border-white/5">
-          <span class="text-indigo-400 font-bold">GET /proxy</span>
-          <span class="text-slate-400">Stream CORS proxy & DASH .m4s segment wrapper</span>
+      <!-- Endpoints Overview -->
+      <div class="bg-dark-800/90 border border-white/10 rounded-2xl p-6 shadow-2xl backdrop-blur-md">
+        <h2 class="text-xs uppercase tracking-widest text-slate-400 font-bold mb-4">API Endpoints Overview</h2>
+        <div class="space-y-2 font-mono text-xs">
+          <div class="flex items-center justify-between p-3 rounded-lg bg-dark-900 border border-white/5">
+            <span class="text-emerald-400 font-bold">GET /sources</span>
+            <span class="text-slate-400">Videasy decrypted streams (Yoru, Neon, Cypher, Breach)</span>
+          </div>
+          <div class="flex items-center justify-between p-3 rounded-lg bg-dark-900 border border-white/5">
+            <span class="text-emerald-400 font-bold">GET /moviebox/sources</span>
+            <span class="text-slate-400">Moviebox MP4 & DASH streams + CDN captions</span>
+          </div>
+          <div class="flex items-center justify-between p-3 rounded-lg bg-dark-900 border border-white/5">
+            <span class="text-emerald-400 font-bold">GET /moviebox/search</span>
+            <span class="text-slate-400">Search Moviebox title catalog</span>
+          </div>
+          <div class="flex items-center justify-between p-3 rounded-lg bg-dark-900 border border-white/5">
+            <span class="text-blue-400 font-bold">GET /player</span>
+            <span class="text-slate-400">Interactive HTML5 Web Player</span>
+          </div>
+          <div class="flex items-center justify-between p-3 rounded-lg bg-dark-900 border border-white/5">
+            <span class="text-indigo-400 font-bold">GET /proxy</span>
+            <span class="text-slate-400">Stream CORS proxy & DASH .m4s segment wrapper</span>
+          </div>
         </div>
       </div>
     </div>
@@ -224,73 +310,58 @@
   </div>
 
   <script>
-    let activeProvider = "Yoru";
-    let videasyMode = "movie";
-    let movieboxMode = "movie";
+    let activeMovieProvider = "Yoru";
+    let activeTvProvider = "Yoru";
+    let activeCategory = "movies";
 
-    function setVideasyMode(mode) {
-      videasyMode = mode;
-      const movieBtn = document.getElementById('v-mode-movie');
-      const tvBtn = document.getElementById('v-mode-tv');
-      const tvFields = document.getElementById('v-tv-fields');
+    function switchCategory(cat) {
+      activeCategory = cat;
+      const moviesBtn = document.getElementById('tab-movies-btn');
+      const tvBtn = document.getElementById('tab-tv-btn');
+      const searchBtn = document.getElementById('tab-search-btn');
 
-      if (mode === 'movie') {
-        movieBtn.className = 'px-5 py-2 rounded-lg text-xs font-bold transition bg-blue-600 text-white shadow-md';
-        tvBtn.className = 'px-5 py-2 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white';
-        tvFields.style.display = 'none';
+      const secMovies = document.getElementById('section-movies');
+      const secTv = document.getElementById('section-tv');
+      const secSearch = document.getElementById('section-search');
 
-        document.getElementById('tmdb').value = '157336';
-        document.getElementById('title').value = 'Interstellar';
-        document.getElementById('year').value = '2014';
-        document.getElementById('imdb').value = 'tt0816692';
+      // Reset styles
+      moviesBtn.className = 'flex-1 py-3 px-6 rounded-xl text-sm font-extrabold transition text-slate-400 hover:text-white flex items-center justify-center gap-2';
+      tvBtn.className = 'flex-1 py-3 px-6 rounded-xl text-sm font-extrabold transition text-slate-400 hover:text-white flex items-center justify-center gap-2';
+      searchBtn.className = 'flex-1 py-3 px-6 rounded-xl text-sm font-extrabold transition text-slate-400 hover:text-white flex items-center justify-center gap-2';
+
+      secMovies.style.display = 'none';
+      secTv.style.display = 'none';
+      secSearch.style.display = 'none';
+
+      if (cat === 'movies') {
+        moviesBtn.className = 'flex-1 py-3 px-6 rounded-xl text-sm font-extrabold transition bg-blue-600 text-white shadow-lg flex items-center justify-center gap-2';
+        secMovies.style.display = 'block';
+      } else if (cat === 'tv') {
+        tvBtn.className = 'flex-1 py-3 px-6 rounded-xl text-sm font-extrabold transition bg-purple-600 text-white shadow-lg flex items-center justify-center gap-2';
+        secTv.style.display = 'block';
       } else {
-        tvBtn.className = 'px-5 py-2 rounded-lg text-xs font-bold transition bg-purple-600 text-white shadow-md';
-        movieBtn.className = 'px-5 py-2 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white';
-        tvFields.style.display = 'block';
-
-        document.getElementById('tmdb').value = '1396';
-        document.getElementById('title').value = 'Breaking Bad';
-        document.getElementById('year').value = '2008';
-        document.getElementById('season').value = '1';
-        document.getElementById('episode').value = '1';
-        document.getElementById('imdb').value = 'tt0903747';
+        searchBtn.className = 'flex-1 py-3 px-6 rounded-xl text-sm font-extrabold transition bg-indigo-600 text-white shadow-lg flex items-center justify-center gap-2';
+        secSearch.style.display = 'block';
       }
     }
 
-    function setMovieboxMode(mode) {
-      movieboxMode = mode;
-      const movieBtn = document.getElementById('mb-mode-movie');
-      const tvBtn = document.getElementById('mb-mode-tv');
-      const tvFields = document.getElementById('mb-tv-fields');
-
-      if (mode === 'movie') {
-        movieBtn.className = 'px-5 py-2 rounded-lg text-xs font-bold transition bg-emerald-600 text-white shadow-md';
-        tvBtn.className = 'px-5 py-2 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white';
-        tvFields.style.display = 'none';
-
-        document.getElementById('mb-imdb').value = 'tt33311069';
-        document.getElementById('mb-subject').value = '4394044471852286152';
-        document.getElementById('mb-url').value = '';
-      } else {
-        tvBtn.className = 'px-5 py-2 rounded-lg text-xs font-bold transition bg-purple-600 text-white shadow-md';
-        movieBtn.className = 'px-5 py-2 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white';
-        tvFields.style.display = 'block';
-
-        document.getElementById('mb-imdb').value = 'tt9018736';
-        document.getElementById('mb-subject').value = '7850278583678682192';
-        document.getElementById('mb-season').value = '1';
-        document.getElementById('mb-episode').value = '1';
-        document.getElementById('mb-url').value = '';
-      }
-    }
-
-    document.querySelectorAll('.prov-btn').forEach(btn => {
+    document.querySelectorAll('.m-prov-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.prov-btn').forEach(b => {
-          b.className = 'prov-btn px-4 py-1.5 border border-white/10 text-slate-400 bg-transparent rounded-lg text-xs font-semibold transition hover:border-blue-400 hover:text-slate-200';
+        document.querySelectorAll('.m-prov-btn').forEach(b => {
+          b.className = 'm-prov-btn px-4 py-1.5 border border-white/10 text-slate-400 bg-transparent rounded-lg text-xs font-semibold transition hover:border-blue-400 hover:text-slate-200';
         });
-        btn.className = 'prov-btn px-4 py-1.5 border border-blue-400 text-blue-400 bg-blue-400/10 rounded-lg text-xs font-semibold transition';
-        activeProvider = btn.dataset.provider;
+        btn.className = 'm-prov-btn px-4 py-1.5 border border-blue-400 text-blue-400 bg-blue-400/10 rounded-lg text-xs font-semibold transition';
+        activeMovieProvider = btn.dataset.provider;
+      });
+    });
+
+    document.querySelectorAll('.tv-prov-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tv-prov-btn').forEach(b => {
+          b.className = 'tv-prov-btn px-4 py-1.5 border border-white/10 text-slate-400 bg-transparent rounded-lg text-xs font-semibold transition hover:border-purple-400 hover:text-slate-200';
+        });
+        btn.className = 'tv-prov-btn px-4 py-1.5 border border-purple-400 text-purple-400 bg-purple-400/10 rounded-lg text-xs font-semibold transition';
+        activeTvProvider = btn.dataset.provider;
       });
     });
 
@@ -313,41 +384,29 @@
       return String(obj);
     }
 
-    let lastSources = null;
-    let lastSubs = null;
-
-    async function fetchSources() {
-      const tmdb = document.getElementById('tmdb').value.trim();
-      const title = document.getElementById('title').value.trim();
-      const year = document.getElementById('year').value.trim();
-      const type = videasyMode;
-      const season = document.getElementById('season').value.trim() || '1';
-      const episode = document.getElementById('episode').value.trim() || '1';
-      const imdb = document.getElementById('imdb').value.trim();
-
-      if (!tmdb || !title) {
-        document.getElementById('output').innerHTML = '<span class="text-slate-500">Fill in tmdbId and title</span>';
-        return;
-      }
+    // Videasy Movie Fetcher
+    let lastMovieSources = null, lastMovieSubs = null;
+    async function fetchMovieSources() {
+      const tmdb = document.getElementById('m-tmdb').value.trim();
+      const title = document.getElementById('m-title').value.trim();
+      const year = document.getElementById('m-year').value.trim();
+      const imdb = document.getElementById('m-imdb').value.trim();
 
       const params = new URLSearchParams({
-        tmdbId: tmdb, mediaType: type, title, provider: activeProvider,
-        ...(year && {year}), ...(type === 'tv' && {seasonId: season, episodeId: episode}),
-        ...(imdb && {imdbId: imdb})
+        tmdbId: tmdb, mediaType: 'movie', title, provider: activeMovieProvider,
+        ...(year && {year}), ...(imdb && {imdbId: imdb})
       });
 
       const url = '/sources?' + params.toString();
-      document.getElementById('req-url').textContent = 'GET ' + url;
+      document.getElementById('m-req-url').textContent = 'GET ' + url;
 
-      const statusDiv = document.getElementById('status');
-      const output = document.getElementById('output');
-      const playBtn = document.getElementById('play-btn');
+      const statusDiv = document.getElementById('m-status');
+      const output = document.getElementById('m-output');
+      const playBtn = document.getElementById('m-play-btn');
       statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs mb-3.5 bg-blue-500/10 border border-blue-500/20 text-blue-300';
-      statusDiv.innerHTML = '<span class="inline-block w-3.5 h-3.5 border-2 border-blue-500/20 border-t-blue-400 rounded-full animate-spin"></span> Fetching from ' + activeProvider + '...';
+      statusDiv.innerHTML = '<span class="inline-block w-3.5 h-3.5 border-2 border-blue-500/20 border-t-blue-400 rounded-full animate-spin"></span> Fetching Movie from ' + activeMovieProvider + '...';
       output.textContent = '';
       playBtn.style.display = 'none';
-      lastSources = null;
-      lastSubs = null;
 
       try {
         const resp = await fetch(url);
@@ -356,10 +415,10 @@
           statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs mb-3.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300';
           const sourcesList = data.sources || data.data?.sources || [];
           const subsList = data.subtitles || data.data?.subtitles || [];
-          statusDiv.innerHTML = '✓ ' + activeProvider + ' — ' + sourcesList.length + ' source(s), ' + subsList.length + ' subtitle(s)';
+          statusDiv.innerHTML = '✓ ' + activeMovieProvider + ' (🎬 Movie) — ' + sourcesList.length + ' source(s), ' + subsList.length + ' subtitle(s)';
           if (sourcesList.length > 0) {
-            lastSources = sourcesList;
-            lastSubs = subsList;
+            lastMovieSources = sourcesList;
+            lastMovieSubs = subsList;
             playBtn.style.display = 'inline-block';
           }
         } else {
@@ -374,42 +433,36 @@
       }
     }
 
-    function openPlayer() {
-      if (!lastSources || lastSources.length === 0) return;
-      const srcJson = JSON.stringify(lastSources);
-      const subJson = lastSubs ? JSON.stringify(lastSubs) : '';
+    function openMoviePlayer() {
+      if (!lastMovieSources) return;
+      const srcJson = JSON.stringify(lastMovieSources);
+      const subJson = lastMovieSubs ? JSON.stringify(lastMovieSubs) : '';
       window.open('/player?sources=' + encodeURIComponent(srcJson) + (subJson ? '&subtitles=' + encodeURIComponent(subJson) : ''), '_blank');
     }
 
-    let lastMbSources = null;
-    let lastMbSubs = null;
-
-    async function fetchMoviebox() {
-      const imdbVal = document.getElementById('mb-imdb').value.trim();
-      const subjectVal = document.getElementById('mb-subject').value.trim();
-      const urlVal = document.getElementById('mb-url').value.trim();
-      const season = document.getElementById('mb-season').value.trim() || '1';
-      const episode = document.getElementById('mb-episode').value.trim() || '1';
+    // Moviebox Movie Fetcher
+    let lastMbMovieSources = null, lastMbMovieSubs = null;
+    async function fetchMovieboxMovie() {
+      const imdbVal = document.getElementById('mb-m-imdb').value.trim();
+      const subjectVal = document.getElementById('mb-m-subject').value.trim();
+      const urlVal = document.getElementById('mb-m-url').value.trim();
 
       const params = new URLSearchParams({
         ...(imdbVal && { imdbId: imdbVal }),
         ...(subjectVal && { subjectId: subjectVal }),
-        ...(urlVal && { url: urlVal }),
-        ...(movieboxMode === 'tv' && { seasonId: season, episodeId: episode })
+        ...(urlVal && { url: urlVal })
       });
 
       const url = '/moviebox/sources?' + params.toString();
-      document.getElementById('mb-req-url').textContent = 'GET ' + url;
+      document.getElementById('mb-m-req-url').textContent = 'GET ' + url;
 
-      const statusDiv = document.getElementById('mb-status');
-      const output = document.getElementById('mb-output');
-      const playBtn = document.getElementById('mb-play-btn');
+      const statusDiv = document.getElementById('mb-m-status');
+      const output = document.getElementById('mb-m-output');
+      const playBtn = document.getElementById('mb-m-play-btn');
       statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs mb-3.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300';
-      statusDiv.innerHTML = '<span class="inline-block w-3.5 h-3.5 border-2 border-emerald-500/20 border-t-emerald-400 rounded-full animate-spin"></span> Fetching Moviebox sources...';
+      statusDiv.innerHTML = '<span class="inline-block w-3.5 h-3.5 border-2 border-emerald-500/20 border-t-emerald-400 rounded-full animate-spin"></span> Fetching Moviebox Movie...';
       output.textContent = '';
       playBtn.style.display = 'none';
-      lastMbSources = null;
-      lastMbSubs = null;
 
       try {
         const resp = await fetch(url);
@@ -419,11 +472,10 @@
           const sourcesList = data.sources || data.data?.sources || [];
           const subsList = data.subtitles || data.data?.subtitles || [];
           const metaTitle = data.meta?.title ? (data.meta.title + ' • ') : '';
-          const typeBadge = data.meta?.mediaType === 'tv' ? '📺 TV' : '🎬 Movie';
-          statusDiv.innerHTML = '✓ Moviebox (' + typeBadge + ') — ' + metaTitle + sourcesList.length + ' source(s), ' + subsList.length + ' subtitle(s)';
+          statusDiv.innerHTML = '✓ Moviebox (🎬 Movie) — ' + metaTitle + sourcesList.length + ' source(s), ' + subsList.length + ' subtitle(s)';
           if (sourcesList.length > 0) {
-            lastMbSources = sourcesList;
-            lastMbSubs = subsList;
+            lastMbMovieSources = sourcesList;
+            lastMbMovieSubs = subsList;
             playBtn.style.display = 'inline-block';
           }
         } else {
@@ -438,20 +490,141 @@
       }
     }
 
-    function openMbPlayer() {
-      if (!lastMbSources || lastMbSources.length === 0) return;
-      const srcJson = JSON.stringify(lastMbSources);
-      const subJson = lastMbSubs ? JSON.stringify(lastMbSubs) : '';
+    function openMbMoviePlayer() {
+      if (!lastMbMovieSources) return;
+      const srcJson = JSON.stringify(lastMbMovieSources);
+      const subJson = lastMbMovieSubs ? JSON.stringify(lastMbMovieSubs) : '';
       window.open('/player?sources=' + encodeURIComponent(srcJson) + (subJson ? '&subtitles=' + encodeURIComponent(subJson) : ''), '_blank');
     }
 
+    // Videasy TV Fetcher
+    let lastTvSources = null, lastTvSubs = null;
+    async function fetchTvSources() {
+      const tmdb = document.getElementById('tv-tmdb').value.trim();
+      const title = document.getElementById('tv-title').value.trim();
+      const year = document.getElementById('tv-year').value.trim();
+      const season = document.getElementById('tv-season').value.trim() || '1';
+      const episode = document.getElementById('tv-episode').value.trim() || '1';
+      const imdb = document.getElementById('tv-imdb').value.trim();
+
+      const params = new URLSearchParams({
+        tmdbId: tmdb, mediaType: 'tv', title, provider: activeTvProvider,
+        seasonId: season, episodeId: episode,
+        ...(year && {year}), ...(imdb && {imdbId: imdb})
+      });
+
+      const url = '/sources?' + params.toString();
+      document.getElementById('tv-req-url').textContent = 'GET ' + url;
+
+      const statusDiv = document.getElementById('tv-status');
+      const output = document.getElementById('tv-output');
+      const playBtn = document.getElementById('tv-play-btn');
+      statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs mb-3.5 bg-purple-500/10 border border-purple-500/20 text-purple-300';
+      statusDiv.innerHTML = '<span class="inline-block w-3.5 h-3.5 border-2 border-purple-500/20 border-t-purple-400 rounded-full animate-spin"></span> Fetching TV Episode from ' + activeTvProvider + '...';
+      output.textContent = '';
+      playBtn.style.display = 'none';
+
+      try {
+        const resp = await fetch(url);
+        const data = await resp.json();
+        if (resp.ok) {
+          statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs mb-3.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300';
+          const sourcesList = data.sources || data.data?.sources || [];
+          const subsList = data.subtitles || data.data?.subtitles || [];
+          statusDiv.innerHTML = '✓ ' + activeTvProvider + ' (📺 TV S' + season + 'E' + episode + ') — ' + sourcesList.length + ' source(s), ' + subsList.length + ' subtitle(s)';
+          if (sourcesList.length > 0) {
+            lastTvSources = sourcesList;
+            lastTvSubs = subsList;
+            playBtn.style.display = 'inline-block';
+          }
+        } else {
+          statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs mb-3.5 bg-red-500/10 border border-red-500/20 text-red-300';
+          statusDiv.textContent = '✗ ' + (data.detail || data.error || 'Unknown error');
+        }
+        output.innerHTML = jsonHighlight(data);
+      } catch (e) {
+        statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs mb-3.5 bg-red-500/10 border border-red-500/20 text-red-300';
+        statusDiv.textContent = '✗ ' + e.message;
+        output.textContent = e.message;
+      }
+    }
+
+    function openTvPlayer() {
+      if (!lastTvSources) return;
+      const srcJson = JSON.stringify(lastTvSources);
+      const subJson = lastTvSubs ? JSON.stringify(lastTvSubs) : '';
+      window.open('/player?sources=' + encodeURIComponent(srcJson) + (subJson ? '&subtitles=' + encodeURIComponent(subJson) : ''), '_blank');
+    }
+
+    // Moviebox TV Fetcher
+    let lastMbTvSources = null, lastMbTvSubs = null;
+    async function fetchMovieboxTv() {
+      const imdbVal = document.getElementById('mb-tv-imdb').value.trim();
+      const subjectVal = document.getElementById('mb-tv-subject').value.trim();
+      const urlVal = document.getElementById('mb-tv-url').value.trim();
+      const season = document.getElementById('mb-tv-season').value.trim() || '1';
+      const episode = document.getElementById('mb-tv-episode').value.trim() || '1';
+
+      const params = new URLSearchParams({
+        ...(imdbVal && { imdbId: imdbVal }),
+        ...(subjectVal && { subjectId: subjectVal }),
+        ...(urlVal && { url: urlVal }),
+        seasonId: season, episodeId: episode
+      });
+
+      const url = '/moviebox/sources?' + params.toString();
+      document.getElementById('mb-tv-req-url').textContent = 'GET ' + url;
+
+      const statusDiv = document.getElementById('mb-tv-status');
+      const output = document.getElementById('mb-tv-output');
+      const playBtn = document.getElementById('mb-tv-play-btn');
+      statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs mb-3.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300';
+      statusDiv.innerHTML = '<span class="inline-block w-3.5 h-3.5 border-2 border-emerald-500/20 border-t-emerald-400 rounded-full animate-spin"></span> Fetching Moviebox TV Episode...';
+      output.textContent = '';
+      playBtn.style.display = 'none';
+
+      try {
+        const resp = await fetch(url);
+        const data = await resp.json();
+        if (resp.ok) {
+          statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs mb-3.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300';
+          const sourcesList = data.sources || data.data?.sources || [];
+          const subsList = data.subtitles || data.data?.subtitles || [];
+          const metaTitle = data.meta?.title ? (data.meta.title + ' • ') : '';
+          statusDiv.innerHTML = '✓ Moviebox (📺 TV S' + season + 'E' + episode + ') — ' + metaTitle + sourcesList.length + ' source(s), ' + subsList.length + ' subtitle(s)';
+          if (sourcesList.length > 0) {
+            lastMbTvSources = sourcesList;
+            lastMbTvSubs = subsList;
+            playBtn.style.display = 'inline-block';
+          }
+        } else {
+          statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs mb-3.5 bg-red-500/10 border border-red-500/20 text-red-300';
+          statusDiv.textContent = '✗ ' + (data.detail || 'Unknown error');
+        }
+        output.innerHTML = jsonHighlight(data);
+      } catch (e) {
+        statusDiv.className = 'flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs mb-3.5 bg-red-500/10 border border-red-500/20 text-red-300';
+        statusDiv.textContent = '✗ ' + e.message;
+        output.textContent = e.message;
+      }
+    }
+
+    function openMbTvPlayer() {
+      if (!lastMbTvSources) return;
+      const srcJson = JSON.stringify(lastMbTvSources);
+      const subJson = lastMbTvSubs ? JSON.stringify(lastMbTvSubs) : '';
+      window.open('/player?sources=' + encodeURIComponent(srcJson) + (subJson ? '&subtitles=' + encodeURIComponent(subJson) : ''), '_blank');
+    }
+
+    // Moviebox Search
     async function searchMoviebox() {
       const q = document.getElementById('search-q').value.trim();
       if (!q) return;
       const statusDiv = document.getElementById('search-status');
       const resultsDiv = document.getElementById('search-results');
-      statusDiv.innerHTML = '<span class="text-xs text-indigo-400">Searching...</span>';
+      statusDiv.innerHTML = '<span class="text-xs text-indigo-400 font-bold">Searching Moviebox catalog...</span>';
       resultsDiv.innerHTML = '';
+
       try {
         const resp = await fetch('/moviebox/search?q=' + encodeURIComponent(q));
         const data = await resp.json();
@@ -460,13 +633,21 @@
           data.results.forEach(item => {
             const isTv = item.subjectType === 2;
             const card = document.createElement('div');
-            card.className = `p-3 bg-dark-900 border ${isTv ? 'border-purple-500/20 hover:border-purple-400' : 'border-blue-500/20 hover:border-blue-400'} rounded-xl flex items-center justify-between text-xs transition cursor-pointer`;
+            card.className = `p-3.5 bg-dark-900 border ${isTv ? 'border-purple-500/30 hover:border-purple-400' : 'border-blue-500/30 hover:border-blue-400'} rounded-xl flex items-center justify-between text-xs transition cursor-pointer`;
             card.onclick = () => {
-              document.getElementById('mb-subject').value = item.subjectId;
-              document.getElementById('mb-imdb').value = '';
-              document.getElementById('mb-url').value = '';
-              setMovieboxMode(isTv ? 'tv' : 'movie');
-              fetchMoviebox();
+              if (isTv) {
+                switchCategory('tv');
+                document.getElementById('mb-tv-subject').value = item.subjectId;
+                document.getElementById('mb-tv-imdb').value = '';
+                document.getElementById('mb-tv-url').value = '';
+                fetchMovieboxTv();
+              } else {
+                switchCategory('movies');
+                document.getElementById('mb-m-subject').value = item.subjectId;
+                document.getElementById('mb-m-imdb').value = '';
+                document.getElementById('mb-m-url').value = '';
+                fetchMovieboxMovie();
+              }
             };
             const typeBadge = isTv
               ? '<span class="px-2 py-0.5 bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded font-bold text-[0.65rem] tracking-wider">📺 TV SHOW</span>'
@@ -474,14 +655,14 @@
 
             card.innerHTML = `
               <div>
-                <div class="font-bold text-white flex items-center gap-2 mb-0.5">
+                <div class="font-bold text-white flex items-center gap-2 mb-1">
                   ${typeBadge}
                   <span>${item.title}</span>
                   <span class="text-slate-400 font-normal">(${item.year || 'N/A'})</span>
                 </div>
-                <div class="text-slate-400 font-mono text-[0.7rem]">${item.genre || 'General'} • IMDb: ${item.imdbRating || 'N/A'}</div>
+                <div class="text-slate-400 font-mono text-[0.7rem]">${item.genre || 'General'} • IMDb Rating: ${item.imdbRating || 'N/A'}</div>
               </div>
-              <span class="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-white rounded font-mono text-[0.7rem] transition">Test Stream</span>
+              <span class="px-3 py-1 bg-white/5 hover:bg-white/10 text-white rounded-lg font-mono text-[0.7rem] transition">Test Stream</span>
             `;
             resultsDiv.appendChild(card);
           });
