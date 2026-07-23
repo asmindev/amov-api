@@ -284,25 +284,39 @@
       }
     }
 
-    const initialUrl = '{{ url }}';
-    const initialSources = '{{ sources }}';
-    const initialSubs = '{{ subtitles }}';
-
-    if (initialUrl) play({ quality: 'Auto', url: initialUrl });
-    if (initialSources) {
+    function parseJsonSafely(val) {
+      if (!val) return null;
       try {
-        const list = JSON.parse(initialSources);
-        if (Array.isArray(list) && list.length > 0) {
-          renderSources(list);
-          playBestSource(list);
+        return JSON.parse(val);
+      } catch (e) {
+        try {
+          const txt = document.createElement('textarea');
+          txt.innerHTML = val;
+          return JSON.parse(txt.value);
+        } catch (err) {
+          console.error("JSON parse error:", err);
+          return null;
         }
-      } catch(e) {}
+      }
     }
-    if (initialSubs) {
-      try {
-        const subs = JSON.parse(initialSubs);
-        if (Array.isArray(subs)) renderSubtitles(subs);
-      } catch(e) {}
+
+    const sourcesInputVal = document.getElementById('sources-input')?.value || '{{ sources }}';
+    const initialSourcesList = parseJsonSafely(sourcesInputVal);
+
+    const initialSubsList = parseJsonSafely('{{ subtitles }}');
+
+    if (initialSourcesList && Array.isArray(initialSourcesList) && initialSourcesList.length > 0) {
+      renderSources(initialSourcesList);
+      playBestSource(initialSourcesList);
+    } else {
+      const initialUrlVal = document.getElementById('url-input')?.value || '{{ url }}';
+      if (initialUrlVal) {
+        play({ quality: 'Auto', url: initialUrlVal });
+      }
+    }
+
+    if (initialSubsList && Array.isArray(initialSubsList) && initialSubsList.length > 0) {
+      renderSubtitles(initialSubsList);
     }
   </script>
 </body>
