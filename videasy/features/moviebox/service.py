@@ -722,6 +722,8 @@ async def fetch_sources(
         if s.get("id"):
             resource_id = str(s["id"])
             break
+    if not resource_id:
+        resource_id = subject_id
 
     subtitles = await fetch_moviebox_captions(
         client,
