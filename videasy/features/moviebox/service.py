@@ -628,12 +628,23 @@ async def resolve_imdb_to_moviebox(
 
         results = await search_titles(client, title)
 
-        for res in results:
-            if res.get("subjectType") == subject_type and year and res.get("year") == year:
-                return str(res.get("subjectId", "")), str(res.get("detailPath", ""))
+        clean_req_title = re.sub(r"[^\w\s]", "", title, flags=re.UNICODE).lower().strip()
 
-        if results:
-            return str(results[0].get("subjectId", "")), str(results[0].get("detailPath", ""))
+        # 1. First priority: exact subjectType + year match + title similarity
+        for res in results:
+            if res.get("subjectType") == subject_type:
+                res_title = re.sub(r"[^\w\s]", "", res.get("title", ""), flags=re.UNICODE).lower().strip()
+                res_year = str(res.get("year", ""))
+                if clean_req_title in res_title or res_title in clean_req_title:
+                    if not year or res_year == year or abs(int(res_year or 0) - int(year or 0)) <= 1:
+                        return str(res.get("subjectId", "")), str(res.get("detailPath", ""))
+
+        # 2. Second priority: subjectType match and title prefix match
+        for res in results:
+            if res.get("subjectType") == subject_type:
+                res_title = re.sub(r"[^\w\s]", "", res.get("title", ""), flags=re.UNICODE).lower().strip()
+                if clean_req_title in res_title or res_title in clean_req_title:
+                    return str(res.get("subjectId", "")), str(res.get("detailPath", ""))
     except Exception as exc:
         logger.warning("moviebox reverse lookup failed: %s", exc)
 
