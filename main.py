@@ -1,1 +1,3 @@
-from app.application import app
+from videasy.app import create_app
+
+app = create_app()

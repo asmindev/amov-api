@@ -1,0 +1,21 @@
+from __future__ import annotations
+
+import httpx
+
+from videasy.config import settings
+
+
+def build_default_headers() -> dict[str, str]:
+    return {
+        "Accept": "*/*",
+        "User-Agent": settings.user_agent,
+        "Referer": settings.referer,
+        "Origin": settings.origin,
+    }
+
+
+def create_http_client() -> httpx.AsyncClient:
+    return httpx.AsyncClient(
+        timeout=httpx.Timeout(settings.request_timeout),
+        headers=build_default_headers(),
+    )

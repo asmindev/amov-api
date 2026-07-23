@@ -1,6 +1,6 @@
 [project]
 name = "videasy-decryptor"
-version = "2.0.0"
+version = "3.0.0"
 description = "Videasy.net Decryptor — multi-provider stream unlocker API"
 requires-python = ">=3.11"
 dependencies = [
@@ -8,13 +8,18 @@ dependencies = [
     "uvicorn[standard]",
     "httpx",
     "a2wsgi",
+    "pydantic-settings",
+    "jinja2",
 ]
 
 [project.scripts]
 videasy = "main:app"
 
 [tool.hatch.build.targets.wheel]
-packages = ["main.py", "app/"]
+packages = ["main.py", "videasy/"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
 
 [build-system]
 requires = ["hatchling"]

@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Videasy Decryptor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',sans-serif;background:#0a0a0f;color:#e2e8f0;line-height:1.6}
+    .nav{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;border-bottom:1px solid rgba(255,255,255,.06);background:rgba(10,10,15,.8);backdrop-filter:blur(10px);position:sticky;top:0;z-index:50}
+    .logo{font-weight:700;font-size:1rem;letter-spacing:-.01em} .logo span{color:#60a5fa}
+    .nav-links a{color:#94a3b8;text-decoration:none;font-size:.85rem;margin-left:20px;transition:color .15s} .nav-links a:hover{color:#e2e8f0}
+    .hero{text-align:center;padding:64px 24px 40px}
+    .hero h1{font-size:clamp(2rem,5vw,3.2rem);font-weight:800;letter-spacing:-.03em;margin-bottom:10px} .hero h1 span{color:#60a5fa}
+    .hero p{color:#94a3b8;font-size:1rem;max-width:500px;margin:0 auto}
+    .container{max-width:800px;margin:0 auto;padding:0 24px 60px}
+    .card{background:#111118;border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:24px;margin-bottom:20px}
+    .card-title{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:#64748b;font-weight:600;margin-bottom:16px}
+    .row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;align-items:end}
+    .field{flex:1;min-width:140px}
+    .field label{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#64748b;font-weight:600;margin-bottom:4px}
+    .field input,.field select{width:100%;padding:9px 12px;background:#1a1a24;border:1px solid rgba(255,255,255,.08);border-radius:8px;color:#e2e8f0;font-family:'JetBrains Mono',monospace;font-size:.82rem;outline:none;transition:border .15s}
+    .field input:focus,.field select:focus{border-color:#60a5fa}
+    .field select option{background:#1a1a24}
+    .btn{padding:9px 20px;border:none;border-radius:8px;font-weight:600;font-size:.85rem;cursor:pointer;transition:all .15s;white-space:nowrap}
+    .btn-primary{background:#2563eb;color:#fff} .btn-primary:hover{background:#1d4ed8}
+    .btn-secondary{background:#1e293b;color:#94a3b8} .btn-secondary:hover{background:#334155;color:#e2e8f0}
+    .btn-group{display:flex;gap:6px;flex-wrap:wrap}
+    .btn-provider{padding:7px 16px;border:1px solid rgba(255,255,255,.08);border-radius:8px;background:transparent;color:#94a3b8;font-size:.82rem;font-weight:500;cursor:pointer;transition:all .15s;font-family:'Inter',sans-serif}
+    .btn-provider:hover{border-color:#60a5fa;color:#e2e8f0;background:rgba(96,165,250,.08)}
+    .btn-provider.active{border-color:#60a5fa;color:#60a5fa;background:rgba(96,165,250,.12)}
+    pre{background:#0d0d14;border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:16px;font-family:'JetBrains Mono',monospace;font-size:.78rem;overflow-x:auto;line-height:1.5;min-height:60px;color:#94a3b8;white-space:pre-wrap}
+    pre .key{color:#60a5fa} pre .str{color:#34d399} pre .num{color:#f472b6} pre .bool{color:#fbbf24} pre .null{color:#64748b} pre .bracket{color:#64748b}
+    .status-bar{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:8px;font-size:.82rem;margin-bottom:14px}
+    .status-bar.loading{background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.15);color:#93c5fd}
+    .status-bar.ok{background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.15);color:#34d399}
+    .status-bar.err{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.15);color:#fca5a5}
+    .spinner{width:14px;height:14px;border:2px solid rgba(96,165,250,.2);border-top-color:#60a5fa;border-radius:50%;animation:spin .6s linear infinite;display:inline-block}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .pill{display:inline-block;padding:2px 10px;border-radius:6px;font-size:.72rem;font-weight:600;letter-spacing:.03em}
+    .pill-green{background:rgba(52,211,153,.12);color:#34d399;border:1px solid rgba(52,211,153,.15)}
+    .pill-amber{background:rgba(251,191,36,.12);color:#fbbf24;border:1px solid rgba(251,191,36,.15)}
+    .pill-slate{background:rgba(148,163,184,.1);color:#94a3b8;border:1px solid rgba(148,163,184,.12)}
+    .quick-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+    .quick-tag{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:#1a1a24;border:1px solid rgba(255,255,255,.06);border-radius:8px;color:#94a3b8;text-decoration:none;font-size:.82rem;transition:all .12s;cursor:pointer}
+    .quick-tag:hover{border-color:#60a5fa;color:#e2e8f0;background:rgba(96,165,250,.06)}
+    .quick-tag .tag-prov{color:#60a5fa;font-weight:600}
+    .flex{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    .mt-2{margin-top:12px}
+    .mb-2{margin-bottom:12px}
+    .text-muted{color:#64748b;font-size:.82rem}
+    hr{border:none;border-top:1px solid rgba(255,255,255,.06);margin:20px 0}
+    .endpoint-row{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:8px;background:#0d0d14;font-family:'JetBrains Mono',monospace;font-size:.82rem}
+    .endpoint-row:hover{background:#111118}
+    .method{padding:3px 8px;border-radius:5px;font-weight:700;font-size:.7rem;letter-spacing:.05em}
+    .method.get{background:rgba(52,211,153,.12);color:#34d399;border:1px solid rgba(52,211,153,.15)}
+    .ep-desc{color:#64748b;font-family:'Inter',sans-serif;font-size:.82rem;margin-left:auto}
+    @media(max-width:600px){.row{flex-direction:column} .field{min-width:100%} .nav-links{display:none}}
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="logo">▶ <span>videasy</span> decryptor</div>
+    <div class="nav-links">
+      <a href="#try">Try it</a>
+      <a href="#moviebox">Moviebox</a>
+      <a href="#endpoints">Endpoints</a>
+      <a href="/player" target="_blank">Player</a>
+      <a href="/docs" target="_blank">OpenAPI</a>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <h1><span>videasy</span> decryptor</h1>
+    <p>Pick a provider, get HLS streams + subtitles.</p>
+  </div>
+
+  <div class="container">
+    <div class="card" id="try">
+      <div class="card-title">Try it now</div>
+      <div class="row">
+        <div class="field">
+          <label>tmdbId</label>
+          <input id="tmdb" value="157336" placeholder="e.g. 157336">
+        </div>
+        <div class="field">
+          <label>title</label>
+          <input id="title" value="Interstellar" placeholder="Movie title">
+        </div>
+        <div class="field" style="flex:0.7">
+          <label>year</label>
+          <input id="year" value="2014" placeholder="Year">
+        </div>
+        <div class="field" style="flex:0.7">
+          <label>type</label>
+          <select id="type"><option value="movie" selected>movie</option><option value="tv">tv</option></select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field" style="flex:0.6">
+          <label>season</label>
+          <input id="season" value="1" placeholder="1">
+        </div>
+        <div class="field" style="flex:0.6">
+          <label>episode</label>
+          <input id="episode" value="1" placeholder="1">
+        </div>
+        <div class="field" style="flex:0.7">
+          <label>imdbId</label>
+          <input id="imdb" value="tt0816692" placeholder="tt0816692">
+        </div>
+      </div>
+      <div class="mb-2">
+        <label style="display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#64748b;font-weight:600;margin-bottom:6px">Provider</label>
+        <div class="btn-group" id="provider-group">
+          <button class="btn-provider active" data-provider="Yoru">Yoru</button>
+          <button class="btn-provider" data-provider="Neon">Neon</button>
+          <button class="btn-provider" data-provider="Cypher">Cypher</button>
+          <button class="btn-provider" data-provider="Breach">Breach</button>
+        </div>
+      </div>
+      <div class="flex">
+        <button class="btn btn-primary" id="fetch-btn" onclick="fetchSources()">Fetch sources</button>
+        <button class="btn btn-secondary" id="play-btn" onclick="openPlayer()" style="display:none">▶ Play in Player</button>
+        <select id="sub-source" class="field select" style="max-width:140px; padding: 7px 12px;">
+          <option value="opensubtitles">OpenSubtitles</option>
+          <option value="yoru">Yoru</option>
+          <option value="neon">Neon</option>
+          <option value="cypher">Cypher</option>
+          <option value="breach">Breach</option>
+        </select>
+        <button class="btn btn-secondary" id="fetch-sub-btn" onclick="fetchSubtitles()">💬 Fetch Subs</button>
+        <select id="os-dropdown" style="display:none; flex:1; max-width:200px" onchange="copyOsLink(this)" class="field select">
+          <option value="">-- Select Subtitle --</option>
+        </select>
+        <span class="text-muted" id="req-url" style="font-family:'JetBrains Mono',monospace;font-size:.75rem"></span>
+      </div>
+      <div id="status" class="mt-2"></div>
+      <pre id="output" class="mt-2">Response will appear here</pre>
+    </div>
+
+    <div class="card" id="endpoints">
+      <div class="card-title">Endpoints</div>
+      <div class="endpoint-row">
+        <span class="method get">GET</span>
+        <code>/sources</code>
+        <span class="ep-desc">Fetch decrypted streams</span>
+      </div>
+      <div class="endpoint-row">
+        <span class="method get">GET</span>
+        <code>/moviebox/sources</code>
+        <span class="ep-desc">Fetch Moviebox sources</span>
+      </div>
+      <div class="endpoint-row">
+        <span class="method get">GET</span>
+        <code>/providers</code>
+        <span class="ep-desc">List providers</span>
+      </div>
+      <div class="endpoint-row">
+        <span class="method get">GET</span>
+        <code>/player</code>
+        <span class="ep-desc">Video player with HLS/MP4 support</span>
+      </div>
+      <div class="endpoint-row">
+        <span class="method get">GET</span>
+        <code>/health</code>
+        <span class="ep-desc">Health check</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Quick links</div>
+      <div class="quick-list">
+        <a class="quick-tag" href="/sources?tmdbId=157336&mediaType=movie&title=Interstellar&year=2014&imdbId=tt0816692&provider=Yoru" target="_blank">
+          Interstellar <span class="tag-prov">Yoru</span>
+        </a>
+        <a class="quick-tag" href="/sources?tmdbId=157336&mediaType=movie&title=Interstellar&year=2014&imdbId=tt0816692&provider=Neon" target="_blank">
+          Interstellar <span class="tag-prov">Neon</span>
+        </a>
+        <a class="quick-tag" href="/sources?tmdbId=27205&mediaType=movie&title=Inception&year=2010&imdbId=tt1375666&provider=Yoru" target="_blank">
+          Inception <span class="tag-prov">Yoru</span>
+        </a>
+        <a class="quick-tag" href="/sources?tmdbId=1396&mediaType=tv&title=Breaking+Bad&year=2008&seasonId=1&episodeId=1&provider=Yoru" target="_blank">
+          Breaking Bad S1E1 <span class="tag-prov">Yoru</span>
+        </a>
+        <a class="quick-tag" href="/sources?tmdbId=66732&mediaType=tv&title=Stranger+Things&year=2016&seasonId=1&episodeId=1&provider=Neon" target="_blank">
+          Stranger Things S1E1 <span class="tag-prov">Neon</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="card" id="moviebox">
+      <div class="card-title">Moviebox</div>
+      <div class="row">
+        <div class="field" style="flex:2">
+          <label>URL / Slug / Subject ID</label>
+          <input id="mb-input" value="https://themoviebox.xyz/movies/check-out-sekarang-pay-later-caper-QMd0JfnG5U9?id=8313012068559605176" placeholder="https://themoviebox.xyz/... or subjectId or slug">
+        </div>
+        <div class="field" style="flex:1">
+          <label>Cookie (Optional for Full Movie)</label>
+          <input id="mb-cookie" value="" placeholder="mb_token=...; token=...">
+        </div>
+        <div class="field" style="flex:0.4">
+          <label>type</label>
+          <select id="mb-type"><option value="movie" selected>movie</option><option value="tv">tv</option></select>
+        </div>
+      </div>
+      <div class="flex">
+        <button class="btn btn-primary" onclick="fetchMoviebox()">Fetch Moviebox sources</button>
+        <button class="btn btn-secondary" id="mb-play-btn" onclick="openMbPlayer()" style="display:none">▶ Play in Player</button>
+        <span class="text-muted" id="mb-req-url" style="font-family:'JetBrains Mono',monospace;font-size:.75rem"></span>
+      </div>
+      <div id="mb-status" class="mt-2"></div>
+      <pre id="mb-output" class="mt-2">Response will appear here</pre>
+      <div class="quick-list mt-2">
+        <a class="quick-tag" onclick="setMbInput('https://themoviebox.xyz/movies/check-out-sekarang-pay-later-caper-QMd0JfnG5U9?id=8313012068559605176'); fetchMoviebox();">
+          Check Out Sekarang <span class="tag-prov">Moviebox</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Providers</div>
+      <div class="flex">
+        {{ provider_badges }}
+      </div>
+      <div class="text-muted mt-2">Try each provider if one fails — availability varies per title.</div>
+    </div>
+  </div>
+
+  <script>
+    let activeProvider = "Yoru";
+
+    document.querySelectorAll('.btn-provider').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.btn-provider').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeProvider = btn.dataset.provider;
+      });
+    });
+
+    function jsonHighlight(obj) {
+      if (typeof obj === 'string') return '<span class="str">"' + obj.replace(/"/g, '\\"') + '"</span>';
+      if (typeof obj === 'number') return '<span class="num">' + obj + '</span>';
+      if (typeof obj === 'boolean') return '<span class="bool">' + obj + '</span>';
+      if (obj === null) return '<span class="null">null</span>';
+      if (Array.isArray(obj)) {
+        if (obj.length === 0) return '<span class="bracket">[]</span>';
+        let items = obj.map(v => jsonHighlight(v));
+        return '<span class="bracket">[</span><br>' + items.map(v => '  ' + v).join(',<br>') + '<br><span class="bracket">]</span>';
+      }
+      if (typeof obj === 'object') {
+        let keys = Object.keys(obj);
+        if (keys.length === 0) return '<span class="bracket">{}</span>';
+        let pairs = keys.map(k => '<span class="key">"' + k + '"</span>: ' + jsonHighlight(obj[k]));
+        return '<span class="bracket">{</span><br>' + pairs.map(p => '  ' + p).join(',<br>') + '<br><span class="bracket">}</span>';
+      }
+      return String(obj);
+    }
+
+    let lastSources = null;
+
+    async function fetchSources() {
+      const tmdb = document.getElementById('tmdb').value.trim();
+      const title = document.getElementById('title').value.trim();
+      const year = document.getElementById('year').value.trim();
+      const type = document.getElementById('type').value;
+      const season = document.getElementById('season').value.trim() || '1';
+      const episode = document.getElementById('episode').value.trim() || '1';
+      const imdb = document.getElementById('imdb').value.trim();
+
+      if (!tmdb || !title) {
+        document.getElementById('output').innerHTML = '<span class="null">Fill in tmdbId and title</span>';
+        return;
+      }
+
+      const params = new URLSearchParams({
+        tmdbId: tmdb, mediaType: type, title, provider: activeProvider,
+        ...(year && {year}), ...(type === 'tv' && {seasonId: season, episodeId: episode}),
+        ...(imdb && {imdbId: imdb})
+      });
+
+      const url = '/sources?' + params.toString();
+      document.getElementById('req-url').textContent = 'GET ' + url;
+
+      const statusDiv = document.getElementById('status');
+      const output = document.getElementById('output');
+      const playBtn = document.getElementById('play-btn');
+      statusDiv.className = 'status-bar loading';
+      statusDiv.innerHTML = '<span class="spinner"></span> Fetching from ' + activeProvider + '...';
+      output.textContent = '';
+      playBtn.style.display = 'none';
+      lastSources = null;
+
+      try {
+        const resp = await fetch(url);
+        const data = await resp.json();
+        if (resp.ok) {
+          statusDiv.className = 'status-bar ok';
+          const count = data.data?.sources?.length || 0;
+          const subCount = data.data?.subtitles?.length || 0;
+          statusDiv.innerHTML = '✓ ' + activeProvider + ' — ' + count + ' source' + (count !== 1 ? 's' : '') + ', ' + subCount + ' subtitle' + (subCount !== 1 ? 's' : '');
+          if (count > 0) {
+            lastSources = data.data.sources;
+            playBtn.style.display = 'inline-block';
+          }
+        } else {
+          statusDiv.className = 'status-bar err';
+          statusDiv.textContent = '✗ ' + (data.detail || data.error || 'Unknown error');
+        }
+        output.innerHTML = jsonHighlight(data);
+      } catch (e) {
+        statusDiv.className = 'status-bar err';
+        statusDiv.textContent = '✗ ' + e.message;
+        output.textContent = e.message;
+      }
+    }
+
+    function openPlayer() {
+      if (!lastSources || lastSources.length === 0) return;
+      const json = JSON.stringify(lastSources);
+      window.open('/player?sources=' + encodeURIComponent(json), '_blank');
+    }
+
+    async function fetchSubtitles() {
+      const source = document.getElementById('sub-source').value;
+      const tmdb = document.getElementById('tmdb').value.trim();
+      const title = document.getElementById('title').value.trim();
+      const year = document.getElementById('year').value.trim();
+      const type = document.getElementById('type').value;
+      const season = document.getElementById('season').value.trim() || '1';
+      const episode = document.getElementById('episode').value.trim() || '1';
+      const imdb = document.getElementById('imdb').value.trim();
+
+      if (source === 'opensubtitles' && !imdb) {
+        alert("Please fill in imdbId for OpenSubtitles");
+        return;
+      }
+      if (source !== 'opensubtitles' && (!tmdb || !title)) {
+        alert("Please fill in tmdbId and title for " + source);
+        return;
+      }
+      
+      const subBtn = document.getElementById('fetch-sub-btn');
+      const osDropdown = document.getElementById('os-dropdown');
+      
+      subBtn.innerHTML = '<span class="spinner" style="margin-right:6px"></span> Fetching...';
+      subBtn.disabled = true;
+      osDropdown.style.display = 'none';
+      osDropdown.innerHTML = '<option value="">-- Select Subtitle --</option>';
+      
+      const params = new URLSearchParams({
+        title, mediaType: type, tmdbId: tmdb,
+        ...(year && {year}), ...(type === 'tv' && {seasonId: season, episodeId: episode}),
+        ...(imdb && {imdbId: imdb})
+      });
+      
+      try {
+        const resp = await fetch('/subtitles/' + source + '?' + params.toString());
+        const data = await resp.json();
+        
+        if (resp.ok && data.subtitles && data.subtitles.length > 0) {
+          data.subtitles.forEach(sub => {
+            const opt = document.createElement('option');
+            opt.value = sub.url;
+            opt.textContent = sub.language;
+            osDropdown.appendChild(opt);
+          });
+          osDropdown.style.display = 'block';
+          subBtn.innerHTML = '💬 Subs (' + data.subtitles.length + ')';
+        } else {
+          subBtn.innerHTML = '💬 No Subs found';
+        }
+      } catch (e) {
+        subBtn.innerHTML = '💬 Error';
+      }
+      subBtn.disabled = false;
+    }
+
+    let lastMbSources = null;
+
+    function setMbInput(val) {
+      document.getElementById('mb-input').value = val;
+    }
+
+    async function fetchMoviebox() {
+      const inputVal = document.getElementById('mb-input').value.trim();
+      const cookieVal = document.getElementById('mb-cookie').value.trim();
+      if (!inputVal) {
+        document.getElementById('mb-output').innerHTML = '<span class="null">Fill in URL, slug, or subjectId</span>';
+        return;
+      }
+      const params = new URLSearchParams({ url: inputVal, ...(cookieVal && { cookie: cookieVal }) });
+      const url = '/moviebox/sources?' + params.toString();
+      document.getElementById('mb-req-url').textContent = 'GET ' + url;
+      const statusDiv = document.getElementById('mb-status');
+      const output = document.getElementById('mb-output');
+      const playBtn = document.getElementById('mb-play-btn');
+      statusDiv.className = 'status-bar loading';
+      statusDiv.innerHTML = '<span class="spinner"></span> Fetching from Moviebox...';
+      output.textContent = '';
+      playBtn.style.display = 'none';
+      lastMbSources = null;
+      try {
+        const resp = await fetch(url);
+        const data = await resp.json();
+        if (resp.ok) {
+          statusDiv.className = 'status-bar ok';
+          const count = data.data?.sources?.length || 0;
+          statusDiv.innerHTML = '✓ Moviebox — ' + count + ' source' + (count !== 1 ? 's' : '');
+          if (count > 0) {
+            lastMbSources = data.data.sources;
+            playBtn.style.display = 'inline-block';
+          }
+        } else {
+          statusDiv.className = 'status-bar err';
+          statusDiv.textContent = '✗ ' + (data.detail || 'Unknown error');
+        }
+        output.innerHTML = jsonHighlight(data);
+      } catch (e) {
+        statusDiv.className = 'status-bar err';
+        statusDiv.textContent = '✗ ' + e.message;
+        output.textContent = e.message;
+      }
+    }
+
+    function openMbPlayer() {
+      if (!lastMbSources || lastMbSources.length === 0) return;
+      const json = JSON.stringify(lastMbSources);
+      window.open('/player?sources=' + encodeURIComponent(json), '_blank');
+    }
+
+    function copyOsLink(select) {
+      if(select.value) {
+        navigator.clipboard.writeText(select.value);
+        alert("Subtitle URL copied to clipboard!");
+        select.value = "";
+      }
+    }
+
+    document.addEventListener('keydown', e => { if (e.key === 'Enter') fetchSources(); });
+  </script>
+</body>
+</html>

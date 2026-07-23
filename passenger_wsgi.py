@@ -4,6 +4,6 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 
 from a2wsgi import ASGIMiddleware
-from app.application import app
+from videasy.app import create_app
 
-application = ASGIMiddleware(app)
+application = ASGIMiddleware(create_app())
