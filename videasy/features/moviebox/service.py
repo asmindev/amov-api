@@ -524,6 +524,47 @@ def extract_sources(detail: dict[str, Any], include_play_streams: list[dict] | N
         "sources": deduped,
         "subtitles": subtitles,
     }
+async def fetch_moviebox_captions(
+    client: httpx.AsyncClient,
+    subject_id: str,
+    detail_path: str = "",
+    resource_id: str = "",
+    format_type: str = "MP4",
+) -> list[dict[str, str]]:
+    """Fetch rich subtitles with real CDN .srt URLs directly from the Moviebox caption API."""
+    url = f"{API_BASE}/wefeed-h5api-bff/subject/caption?format={format_type}&subjectId={subject_id}"
+    if detail_path:
+        url += f"&detailPath={detail_path}"
+    if resource_id:
+        url += f"&id={resource_id}"
+
+    token = await ensure_guest_token(client)
+    headers = _build_headers()
+    if token:
+        headers["token"] = token
+        headers["Authorization"] = f"Bearer {token}"
+        headers["Cookie"] = f"i18n_lang=en; token={token}"
+
+    try:
+        resp = await client.get(url, headers=headers)
+        resp.raise_for_status()
+        data = resp.json()
+        if data.get("code") == 0:
+            captions = data.get("data", {}).get("captions", [])
+            return [
+                {
+                    "lang": (c.get("lan") or "en")[:2].lower(),
+                    "language": c.get("lanName") or "Subtitle",
+                    "url": c.get("url", ""),
+                }
+                for c in captions
+                if c.get("url")
+            ]
+    except Exception as exc:
+        logger.warning("moviebox caption fetch failed: %s", exc)
+    return []
+
+
 async def fetch_sources(
     client: httpx.AsyncClient,
     url_or_id: str,
@@ -584,7 +625,25 @@ async def fetch_sources(
                     cookie=cookie,
                 )
 
-    return extract_sources(detail, include_play_streams=play_streams)
+    result = extract_sources(detail, include_play_streams=play_streams)
+
+    # Fetch rich subtitles with real CDN .srt URLs from caption endpoint
+    resource_id = ""
+    for s in play_streams:
+        if s.get("id"):
+            resource_id = str(s["id"])
+            break
+
+    subtitles = await fetch_moviebox_captions(
+        client,
+        subject_id=subject_id,
+        detail_path=detail_path,
+        resource_id=resource_id,
+    )
+    if subtitles:
+        result["subtitles"] = subtitles
+
+    return result
 
 
 async def search_titles(
