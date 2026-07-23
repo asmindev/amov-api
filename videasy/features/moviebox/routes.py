@@ -40,7 +40,7 @@ async def moviebox_sources(
         raise HTTPException(status_code=400, detail="Empty input")
     try:
         data = await mb_fetch(
-            request.app.state.client, input_str,
+            request.app.state.api_client, input_str,
             se=int(seasonId), ep=int(episodeId), cookie=cookie,
         )
         subject_type = data.get("subjectType", 1)
@@ -118,7 +118,7 @@ async def moviebox_search_endpoint(
     from videasy.features.moviebox.service import search_titles as mb_search
 
     try:
-        results = await mb_search(request.app.state.client, q, page=page)
+        results = await mb_search(request.app.state.api_client, q, page=page)
         return {"query": q, "page": page, "status": "ok", "results": results}
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Moviebox search error: {str(e)}")

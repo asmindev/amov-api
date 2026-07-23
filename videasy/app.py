@@ -2,28 +2,29 @@ from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
+from typing import AsyncGenerator
 
-import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from videasy.config import settings
 from videasy.core.cache import TTLCache
 from videasy.core.exceptions import register_exception_handlers
-from videasy.core.http_client import build_default_headers, create_http_client
+from videasy.core.http_client import create_api_client, create_proxy_client
 
 logger = logging.getLogger("videasy")
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    logger.info("starting up — httpx client initialised")
-    app.state.client = create_http_client()
-    app.state.cache: TTLCache = TTLCache()
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    logger.info("starting up — httpx clients initialised")
+    app.state.api_client = create_api_client()
+    app.state.proxy_client = create_proxy_client()
+    app.state.client = app.state.api_client  # backward compat alias
+    app.state.cache = TTLCache()
     yield
-    await app.state.client.aclose()
-    logger.info("shut down — client closed")
+    await app.state.api_client.aclose()
+    await app.state.proxy_client.aclose()
+    logger.info("shut down — clients closed")
 
 
 def create_app() -> FastAPI:

@@ -14,7 +14,7 @@ def get_settings() -> Settings:
 
 
 async def get_http_client(request: Request) -> AsyncIterator[httpx.AsyncClient]:
-    yield request.app.state.client
+    yield request.app.state.api_client
 
 
 def get_cache(request: Request) -> TTLCache:

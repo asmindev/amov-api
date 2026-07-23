@@ -59,7 +59,7 @@ async def get_sources(
 
     try:
         provider_name, raw = await fetch_sources(
-            client=request.app.state.client,
+            client=request.app.state.api_client,
             cache=request.app.state.cache,
             provider=prov,
             params=params,

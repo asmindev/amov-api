@@ -14,8 +14,34 @@ def build_default_headers() -> dict[str, str]:
     }
 
 
-def create_http_client() -> httpx.AsyncClient:
+def create_api_client() -> httpx.AsyncClient:
+    """Client for API calls (sources, moviebox, subtitles, decryption).
+
+    Has a read timeout to prevent zombie connections when upstreams stall.
+    """
+    return httpx.AsyncClient(
+        timeout=httpx.Timeout(connect=10.0, read=30.0, write=10.0, pool=10.0),
+        headers=build_default_headers(),
+        limits=httpx.Limits(
+            max_connections=20,
+            max_keepalive_connections=10,
+            keepalive_expiry=10,
+        ),
+    )
+
+
+def create_proxy_client() -> httpx.AsyncClient:
+    """Client for proxy streaming (HLS, MP4, DASH segments).
+
+    No read timeout — streams must run for as long as the video plays.
+    Higher connection limits since each viewer ties up one connection.
+    """
     return httpx.AsyncClient(
         timeout=httpx.Timeout(connect=10.0, read=None, write=10.0, pool=10.0),
         headers=build_default_headers(),
+        limits=httpx.Limits(
+            max_connections=100,
+            max_keepalive_connections=20,
+            keepalive_expiry=30,
+        ),
     )

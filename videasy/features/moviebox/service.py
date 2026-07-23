@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
@@ -20,6 +21,8 @@ PLAY_ENDPOINT = settings.moviebox_play_endpoint
 
 # In-memory guest JWT token cache (token, expires_at)
 _guest_token: list[str] = [""]  # mutable container so it's writable from async funcs
+_guest_token_expiry: float = 0.0  # monotonic timestamp when token expires
+_GUEST_TOKEN_TTL: float = 300.0  # 5 minutes
 
 _QUALITY_MAP: dict[int, str] = {
     360: "360p",
@@ -170,7 +173,7 @@ async def fetch_detail(
     for url, desc in urls_to_try:
         logger.info("fetching moviebox detail: %s", desc)
         try:
-            resp = await client.get(url, headers=_build_headers())
+            resp = await client.get(url, headers=_build_headers(), timeout=15.0)
             if resp.status_code == 429:
                 raise RuntimeError("rate limited by themoviebox API")
             if resp.status_code == 404:
@@ -187,13 +190,21 @@ async def fetch_detail(
     raise RuntimeError("Moviebox detail not found (404)")
 
 
+def _invalidate_guest_token() -> None:
+    """Clear the cached guest token so it is re-fetched on next use."""
+    global _guest_token_expiry
+    _guest_token[0] = ""
+    _guest_token_expiry = 0.0
+
+
 async def ensure_guest_token(client: httpx.AsyncClient) -> str:
     """Fetch and cache a fresh guest JWT token from /wefeed-h5api-bff/country-code if needed."""
-    if _guest_token[0]:
+    global _guest_token_expiry
+    if _guest_token[0] and time.monotonic() < _guest_token_expiry:
         return _guest_token[0]
     try:
         url = f"{API_BASE}/wefeed-h5api-bff/country-code"
-        resp = await client.get(url, headers=_build_headers())
+        resp = await client.get(url, headers=_build_headers(), timeout=10.0)
         if resp.status_code == 200:
             token = resp.cookies.get("token") or ""
             if not token:
@@ -203,6 +214,7 @@ async def ensure_guest_token(client: httpx.AsyncClient) -> str:
                     token = m.group(1)
             if token:
                 _guest_token[0] = token
+                _guest_token_expiry = time.monotonic() + _GUEST_TOKEN_TTL
                 logger.debug("automatically initialized guest JWT token via country-code")
                 return token
     except Exception as exc:
@@ -225,6 +237,7 @@ async def fetch_play_streams(
     using Nuxt cookie format, and performs a 2-hop session handshake to extract
     direct 1080p/480p/360p/DASH/HLS video streams completely without user intervention.
     """
+    global _guest_token_expiry
     from urllib.parse import quote
     import json
 
@@ -258,7 +271,7 @@ async def fetch_play_streams(
             headers["Cookie"] = f'i18n_lang=en; mb_token={enc_tok}; token={active_tok}'
 
     try:
-        resp = await client.get(url, headers=headers)
+        resp = await client.get(url, headers=headers, timeout=20.0)
         resp.raise_for_status()
 
         # Step 1: Extract returned token from Set-Cookie header
@@ -267,6 +280,7 @@ async def fetch_play_streams(
         returned_token = m.group(1) if m else ""
         if returned_token:
             _guest_token[0] = returned_token
+            _guest_token_expiry = time.monotonic() + _GUEST_TOKEN_TTL
 
         data = resp.json()
         play_data = data.get("data", {})
@@ -277,7 +291,7 @@ async def fetch_play_streams(
             enc_ret_tok = quote(json.dumps(returned_token))
             headers["Cookie"] = f'i18n_lang=en; mb_token={enc_ret_tok}; token={returned_token}'
             logger.info("performing automatic 2-hop token handshake to unlock DASH streams...")
-            resp_retry = await client.get(url, headers=headers)
+            resp_retry = await client.get(url, headers=headers, timeout=15.0)
             if resp_retry.status_code == 200:
                 data = resp_retry.json()
                 play_data = data.get("data", {})
@@ -782,18 +796,21 @@ async def search_titles(
     client: httpx.AsyncClient, query: str, page: int = 1, per_page: int = 12
 ) -> list[dict[str, Any]]:
     """Search for titles on TheMovieBox using POST /wefeed-h5api-bff/subject/search."""
+    global _guest_token_expiry
     token = await ensure_guest_token(client)
     if not token:
         try:
             r0 = await client.get(
                 f"{API_BASE}/wefeed-h5api-bff/subject/play?subjectId=8313012068559605176",
                 headers=_build_headers(),
+                timeout=10.0,
             )
             set_cookie = r0.headers.get("set-cookie", "")
             m = re.search(r"token=([A-Za-z0-9._-]+)", set_cookie)
             if m:
                 token = m.group(1)
                 _guest_token[0] = token
+                _guest_token_expiry = time.monotonic() + _GUEST_TOKEN_TTL
         except Exception:
             pass
 
@@ -809,17 +826,17 @@ async def search_titles(
     payload = {"keyword": sanitized_query or query, "page": page, "perPage": per_page}
 
     try:
-        resp = await client.post(url, json=payload, headers=headers)
+        resp = await client.post(url, json=payload, headers=headers, timeout=15.0)
         if resp.status_code == 400:
             logger.info("Moviebox search received 400 invalid token; refreshing guest token and retrying...")
-            _guest_token[0] = ""
+            _invalidate_guest_token()
             token = await ensure_guest_token(client)
             headers = _build_headers()
             if token:
                 headers["token"] = token
                 headers["Authorization"] = f"Bearer {token}"
                 headers["Cookie"] = f"i18n_lang=en; token={token}"
-            resp = await client.post(url, json=payload, headers=headers)
+            resp = await client.post(url, json=payload, headers=headers, timeout=15.0)
 
         resp.raise_for_status()
         data = resp.json()

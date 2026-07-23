@@ -38,7 +38,7 @@ async def do_proxy_stream(
         except Exception:
             pass
 
-    client: httpx.AsyncClient = request.app.state.client
+    client: httpx.AsyncClient = request.app.state.proxy_client
     req = client.build_request("GET", target_url, headers=proxy_headers)
     try:
         resp = await client.send(req, stream=True, follow_redirects=True)

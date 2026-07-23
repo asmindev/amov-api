@@ -44,7 +44,7 @@ async def get_provider_subtitles(
     if provider_lower == "opensubtitles":
         if not imdbId:
             raise HTTPException(status_code=400, detail="imdbId is required for OpenSubtitles")
-        subs = await fetch_opensubtitles(request.app.state.client, imdbId)
+        subs = await fetch_opensubtitles(request.app.state.api_client, imdbId)
         return {"subtitles": [sub.model_dump() for sub in subs]}
 
     prov = PROVIDER_MAP.get(provider_lower)
@@ -61,7 +61,7 @@ async def get_provider_subtitles(
     )
 
     try:
-        _, raw = await fetch_sources(request.app.state.client, request.app.state.cache, prov, params)
+        _, raw = await fetch_sources(request.app.state.api_client, request.app.state.cache, prov, params)
         decrypted_data = DecryptedData.from_raw(raw)
         subs = decrypted_data.subtitles
         for sub in subs:
@@ -81,5 +81,5 @@ async def get_opensubtitles(
     imdbId: str = Query(..., description="IMDB ID (e.g. tt1234567)"),
 ) -> list[dict[str, Any]]:
     from videasy.models.subtitle import SubtitleItem
-    subs = await fetch_opensubtitles(request.app.state.client, imdbId)
+    subs = await fetch_opensubtitles(request.app.state.api_client, imdbId)
     return [sub.model_dump() for sub in subs]

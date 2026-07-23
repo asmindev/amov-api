@@ -26,7 +26,7 @@ async def proxy_hls(
     headers: str = Query(default="", description="Optional custom JSON headers to forward"),
 ) -> Response:
     """Stream any URL through the backend with Range support and domain-specific headers."""
-    client: httpx.AsyncClient = request.app.state.client
+    client: httpx.AsyncClient = request.app.state.proxy_client
     u_lower = url.lower()
 
     # Build request headers
