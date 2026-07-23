@@ -9,27 +9,39 @@ import httpx
 from fastapi import HTTPException
 
 from videasy.config import settings
+from videasy.core.cache import TTLCache
 from videasy.features.sources.providers import Provider
 from videasy.integrations.decryption import decrypt
 from videasy.models.source import SourceParams
 
 logger = logging.getLogger("videasy")
 
-SeedCache = dict[str, tuple[str, float]]
+SeedCache = TTLCache | dict[str, Any]
 
 
 def get_seed(cache: SeedCache, tmdb_id: str) -> str | None:
+    if isinstance(cache, TTLCache):
+        return cache.get(tmdb_id)
     entry = cache.get(tmdb_id)
     if entry:
-        seed, expiry = entry
-        if time.monotonic() < expiry:
-            return seed
+        if isinstance(entry, tuple):
+            seed, expiry = entry
+            if time.monotonic() < expiry:
+                return seed
+        elif isinstance(entry, str):
+            return entry
     return None
 
 
 def set_seed(cache: SeedCache, tmdb_id: str, seed: str, ttl_ms: int) -> None:
-    expiry = time.monotonic() + (ttl_ms - settings.cache_ttl_offset) / 1000
-    cache[tmdb_id] = (seed, expiry)
+    ttl_seconds = (ttl_ms - settings.cache_ttl_offset) / 1000.0
+    if ttl_seconds <= 0:
+        ttl_seconds = 30.0
+    if isinstance(cache, TTLCache):
+        cache.set(tmdb_id, seed, ttl_seconds)
+    else:
+        expiry = time.monotonic() + ttl_seconds
+        cache[tmdb_id] = (seed, expiry)
 
 
 async def fetch_seed(client: httpx.AsyncClient, cache: SeedCache, tmdb_id: str) -> str:
