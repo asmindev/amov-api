@@ -542,7 +542,7 @@ async def fetch_moviebox_captions(
         headers["Cookie"] = f"i18n_lang=en; token={token}"
 
     try:
-        resp = await client.get(url, headers=headers)
+        resp = await client.get(url, headers=headers, timeout=3.5)
         resp.raise_for_status()
         data = resp.json()
         if data.get("code") == 0:
@@ -680,6 +680,7 @@ async def fetch_sources(
 
     Returns a dict with metadata and ``sources`` / ``subtitles`` lists.
     """
+    orig_input = url_or_id
     # Reverse lookup if url_or_id is an IMDB ID (starts with tt)
     if url_or_id.strip().startswith("tt"):
         sub_id, det_path = await resolve_imdb_to_moviebox(client, url_or_id.strip())
@@ -727,12 +728,15 @@ async def fetch_sources(
     result = extract_sources(detail, include_play_streams=play_streams)
 
     # Automatically resolve IMDB ID for Moviebox entry
-    result["imdbId"] = await resolve_moviebox_imdb_id(
-        client,
-        title=result.get("title", ""),
-        release_date=result.get("releaseDate", ""),
-        subject_type=result.get("subjectType", 1),
-    )
+    if orig_input.strip().startswith("tt"):
+        result["imdbId"] = orig_input.strip()
+    else:
+        result["imdbId"] = await resolve_moviebox_imdb_id(
+            client,
+            title=result.get("title", ""),
+            release_date=result.get("releaseDate", ""),
+            subject_type=result.get("subjectType", 1),
+        )
 
     # Fetch rich subtitles with real CDN .srt URLs from caption endpoint
     subtitles: list[dict[str, str]] = []
