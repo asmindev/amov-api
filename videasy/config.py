@@ -15,6 +15,13 @@ class Settings(BaseSettings):
     cache_ttl_offset: int = 5_000
     opensubtitles_api_key: str = "bOPLedTRgxt5u4jRtkXIbxMf36OSbvEH"
 
+    # Moviebox / Aoneroom API
+    moviebox_api_base: str = "https://h5-api.aoneroom.com"
+    moviebox_detail_endpoint: str = "/wefeed-h5api-bff/detail"
+    moviebox_search_endpoint: str = "/wefeed-h5api-bff/subject/search"
+    moviebox_play_base: str = "https://themoviebox.xyz"
+    moviebox_play_endpoint: str = "/wefeed-h5api-bff/subject/play"
+
     model_config = {"env_prefix": "VIDEASY_", "env_file": ".env"}
 
 

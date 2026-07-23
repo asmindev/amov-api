@@ -11,14 +11,12 @@ from videasy.config import settings
 
 logger = logging.getLogger("moviebox")
 
-# Public detail/search API (no auth needed)
-API_BASE = "https://h5-api.aoneroom.com"
-DETAIL_ENDPOINT = "/wefeed-h5api-bff/detail"
-SEARCH_ENDPOINT = "/wefeed-h5api-bff/subject/search"
-
-# Play endpoint — proxied via themoviebox.xyz which auto-issues a guest JWT
-PLAY_BASE = "https://themoviebox.xyz"
-PLAY_ENDPOINT = "/wefeed-h5api-bff/subject/play"
+# Config aliases
+API_BASE = settings.moviebox_api_base
+DETAIL_ENDPOINT = settings.moviebox_detail_endpoint
+SEARCH_ENDPOINT = settings.moviebox_search_endpoint
+PLAY_BASE = settings.moviebox_play_base
+PLAY_ENDPOINT = settings.moviebox_play_endpoint
 
 # In-memory guest JWT token cache (token, expires_at)
 _guest_token: list[str] = [""]  # mutable container so it's writable from async funcs
