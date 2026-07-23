@@ -1,52 +1,60 @@
-# Videasy Decryptor API
+# Videasy & Moviebox Decryptor API
 
-FastAPI server that decrypts [Videasy.net](https://player.videasy.to) video streams. Fetches encrypted sources from `api.wingsdatabase.com`, decrypts via `enc-dec.app`, and returns quality-labelled HLS streams + subtitles.
+FastAPI server that decrypts video streams and fetches subtitles from **Videasy.net** (Wingsdatabase providers `Yoru`, `Neon`, `Cypher`, `Breach`) and **TheMovieBox.xyz** (Moviebox MP4 and DASH streams + CDN captions).
 
-## Architecture
+---
+
+## 🏗️ Architecture
 
 ```
-┌─────────┐    ┌──────────────────────┐    ┌───────────────┐    ┌────────────┐
-│ Client  │───▶│  /sources endpoint   │───▶│ seed (cached) │───▶│  cipher    │
-└─────────┘    └──────────────────────┘    └───────────────┘    └────────────┘
-                     │                                                    │
-                     │  ┌──────────────────┐                             │
-                     └──│ enc-dec.app      │◀────────────────────────────┘
-                        │ (decrypt)        │
-                        └──────────────────┘
-                                │
-                        ┌───────▼────────┐
-                        │ expand master  │
-                        │ m3u8 → sort    │
-                        │ by quality     │
-                        └───────┬────────┘
-                                │
-                        ┌───────▼────────┐
-                        │   JSON response │
-                        └────────────────┘
+┌─────────┐    ┌──────────────────────────────────────────────┐
+│ Client  │───▶│ /sources (Videasy) | /moviebox/sources      │
+└─────────┘    └──────────────────────────────────────────────┘
+                     │                                  │
+          ┌──────────▼──────────┐            ┌──────────▼──────────┐
+          │ Wingsdatabase       │            │ Moviebox BFF        │
+          │ Decrypt Pipeline    │            │ API & Caption CDN   │
+          └──────────┬──────────┘            └──────────┬──────────┘
+                     │                                  │
+                     └────────────────┬─────────────────┘
+                                      │
+                           ┌──────────▼──────────┐
+                           │ UnifiedMediaResponse│
+                           │  (meta, episode,    │
+                           │  sources, subtitles)│
+                           └─────────────────────┘
 ```
 
-Seed requests are cached in-memory per `tmdbId` with the TTL returned by the upstream API, reducing redundant requests.
+Seeds and tokens are cached in-memory with TTL, minimizing upstream network load and avoiding rate limits.
 
-## Quick Start
+---
+
+## ⚡ Quick Start
 
 ```bash
+# Install dependencies
 pip install -e .
-uvicorn main:app --host 0.0.0.0 --port 8080
+
+# Run the server
+uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-Open http://localhost:8080 for the interactive landing page, or http://localhost:8080/docs for Swagger UI.
+- **Interactive Web Player**: [http://localhost:8000/player](http://localhost:8000/player)
+- **Swagger OpenAPI Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-## API Reference
+---
 
-### `GET /sources`
+## 📖 API Reference
 
-Fetch decrypted HLS streams and subtitles for a movie or TV show.
+### 1. `GET /sources` (Videasy / Wingsdatabase)
 
-#### Parameters
+Fetch decrypted HLS streams and subtitles for a movie or TV show using Wingsdatabase providers (`Yoru`, `Neon`, `Cypher`, `Breach`).
+
+#### Query Parameters
 
 | Parameter    | Type   | Required | Description |
 |-------------|--------|----------|-------------|
-| `tmdbId`    | int    | ✓        | TMDB numerical ID (e.g. `157336` for Interstellar) |
+| `tmdbId`    | string | ✓        | TMDB numerical ID (e.g. `157336` for Interstellar) |
 | `mediaType` | string | ✓        | `movie` or `tv` |
 | `title`     | string | ✓        | Media title (e.g. `Interstellar`) |
 | `provider`  | string | ✓        | `Yoru`, `Neon`, `Cypher`, or `Breach` |
@@ -55,58 +63,130 @@ Fetch decrypted HLS streams and subtitles for a movie or TV show.
 | `episodeId` | string |          | Episode number — TV only (default: `1`) |
 | `imdbId`    | string |          | IMDB ID (e.g. `tt0816692`) |
 
-#### Example Requests
-
+#### Example Request
 ```bash
 # Movie
-curl "http://localhost:8080/sources?tmdbId=157336&mediaType=movie&title=Interstellar&year=2014&provider=Yoru"
+curl "http://localhost:8000/sources?tmdbId=157336&mediaType=movie&title=Interstellar&year=2014&provider=Yoru"
 
 # TV Show
-curl "http://localhost:8080/sources?tmdbId=1396&mediaType=tv&title=Breaking+Bad&year=2008&seasonId=1&episodeId=1&provider=Yoru"
+curl "http://localhost:8000/sources?tmdbId=1396&mediaType=tv&title=Breaking+Bad&year=2008&seasonId=1&episodeId=1&provider=Yoru"
 ```
 
-#### Success Response (200)
+---
+
+### 2. `GET /moviebox/sources` (TheMovieBox.xyz)
+
+Fetch MP4 / DASH streams and CDN `.srt` subtitles for Moviebox titles. Supports fetching by `subjectId`, `imdbId` (automatic reverse lookup), or full URL.
+
+#### Query Parameters
+
+| Parameter   | Type   | Required | Description |
+|------------|--------|----------|-------------|
+| `subjectId`| string | *        | Moviebox internal numerical ID (e.g. `7850278583678682192`) |
+| `imdbId`   | string | *        | IMDB ID (e.g. `tt9018736` — automatically resolves to Moviebox title) |
+| `url`      | string | *        | Full `themoviebox.xyz` URL |
+| `seasonId` | string |          | Season number for TV series (default: `0`) |
+| `episodeId`| string |          | Episode number for TV series (default: `0`) |
+| `cookie`   | string |          | Optional user cookie header |
+
+*\* Provide at least one of `subjectId`, `imdbId`, or `url`.*
+
+#### Example Request
+```bash
+# Query by IMDB ID (Reverse Lookup)
+curl "http://localhost:8000/moviebox/sources?imdbId=tt9018736&seasonId=1&episodeId=1"
+
+# Query by Moviebox Subject ID
+curl "http://localhost:8000/moviebox/sources?subjectId=7850278583678682192&seasonId=1&episodeId=1"
+```
+
+---
+
+### 🌟 Unified Response Schema (`UnifiedMediaResponse`)
+
+Both `/sources` and `/moviebox/sources` return the identical, standardized JSON schema:
 
 ```json
 {
-  "tmdbId": "157336",
-  "provider": "Yoru",
-  "data": {
-    "sources": [
-      {"quality": "4K", "url": "https://cdn.example.com/stream_2160p.m3u8"},
-      {"quality": "1080p", "url": "https://cdn.example.com/stream_1080p.m3u8"},
-      {"quality": "720p", "url": "https://cdn.example.com/stream_720p.m3u8"},
-      {"quality": "480p", "url": "https://cdn.example.com/stream_480p.m3u8"}
-    ],
-    "subtitles": [
-      {"lang": "En", "language": "En", "url": "https://subs.example.com/track_1.vtt"},
-      {"lang": "Id", "language": "Indonesian", "url": "https://subs.example.com/track_2.vtt"}
-    ]
-  }
+  "meta": {
+    "title": "Avatar: The Last Airbender S1-S2",
+    "provider": "Moviebox",
+    "mediaType": "tv",
+    "tmdbId": null,
+    "imdbId": "tt9018736",
+    "year": "2024",
+    "cover": "https://pbcdnw.aoneroom.com/..."
+  },
+  "episode": {
+    "season": 1,
+    "episode": 1
+  },
+  "sources": [
+    {
+      "quality": "1080p (619MB)",
+      "url": "https://bcdnw.hakunaymatata.com/...",
+      "type": "mp4",
+      "headers": null,
+      "source": "play"
+    },
+    {
+      "quality": "Auto (DASH)",
+      "url": "http://localhost:8000/proxy?url=https%3A%2F%2Fsbcdnw2.hakunaymatata.com%2Fdash%2Findex_web.mpd",
+      "type": "dash",
+      "headers": {
+        "X-MB-Token": "Edge-Cache-Cookie=..."
+      },
+      "source": "play"
+    }
+  ],
+  "subtitles": [
+    {
+      "lang": "id",
+      "language": "Indonesian",
+      "url": "https://cacdn.hakunaymatata.com/subtitle/c1ff715920d380eb177494461a8958d5.srt?Policy=..."
+    },
+    {
+      "lang": "en",
+      "language": "English",
+      "url": "https://cacdn.hakunaymatata.com/subtitle/343a6d0628e27cd7a592fbf74181c424.srt?Policy=..."
+    }
+  ]
 }
 ```
 
-#### Error Responses
+*Note: `episode` is `null` for movies (`mediaType: "movie"`).*
 
-| Status | Description |
-|--------|-------------|
-| `400`  | Invalid parameters or unknown provider |
-| `429`  | Rate limited by upstream API (wait and retry) |
-| `502`  | Upstream API failure (try a different provider) |
-| `504`  | Upstream request timed out |
+---
 
-Error body:
+### 3. `GET /moviebox/search`
 
-```json
-{
-  "error": "upstream_error",
-  "detail": "Yoru: upstream HTTP 500"
-}
+Search Moviebox catalog by keyword.
+
+```bash
+curl "http://localhost:8000/moviebox/search?q=Avatar&page=1"
 ```
 
-### `GET /providers`
+---
 
-List available providers and their endpoint slugs.
+### 4. `GET /player`
+
+Embedded HTML5 Web Player interface supporting video quality selection, HLS/MP4 playback, and WebVTT/SRT subtitle track switching.
+
+```bash
+http://localhost:8000/player?sources=[...]
+```
+
+---
+
+### 5. `GET /proxy`
+
+Proxy endpoint for streaming video segments, `.m4s` DASH segments, and WebVTT/SRT subtitles with custom `Origin` and `Referer` headers to bypass CORS and CDN protections.
+
+---
+
+### 6. `GET /providers`
+
+List available Wingsdatabase providers.
 
 ```json
 {
@@ -119,195 +199,63 @@ List available providers and their endpoint slugs.
 }
 ```
 
-### `GET /health`
+---
+
+### 7. `GET /health`
 
 ```json
 {"status": "ok", "version": "2.0.0"}
 ```
 
-### `GET /`
+---
 
-Landing page with interactive form — test the API directly from the browser.
-
-### `GET /docs`
-
-Swagger UI documentation (auto-generated by FastAPI).
-
-## Providers
-
-| Name   | Endpoint       | Quality | Reliability | Notes |
-|--------|---------------|---------|-------------|-------|
-| Yoru   | `cdn`         | Up to 4K | Best | Works for most titles, highest bitrate |
-| Neon   | `neon2`       | Up to 720p | Moderate | Good fallback for hard-to-find titles |
-| Cypher | `downloader2` | Up to 1080p | Moderate | Often has different subtitle tracks |
-| Breach | `m4uhd`       | 1080p / 480p | Low | Non-standard quality labels mapped automatically |
-
-### Provider Selection Strategy
-
-The API requires you to specify a provider explicitly. There is no auto-fallback — this avoids aggressive rate limiting on the upstream API. Try providers in this order:
+## 🛠️ Project Structure
 
 ```
-Yoru → Neon → Cypher → Breach
+main.py                      # Uvicorn entry point
+passenger_wsgi.py            # Passenger WSGI entry point
+pyproject.toml               # Dependencies & build config
+videasy/
+├── app.py                   # FastAPI application factory & lifespan
+├── config.py                # App settings & URLs
+├── deps.py                  # Dependency injection helpers
+├── core/
+│   └── cache.py             # In-memory TTLCache implementation
+├── models/
+│   ├── media.py             # UnifiedMediaResponse models
+│   ├── source.py            # Wingsdatabase source models
+│   ├── subtitle.py          # Subtitle models
+│   └── common.py            # Common provider info models
+├── features/
+│   ├── sources/             # Videasy / Wingsdatabase feature
+│   │   ├── routes.py
+│   │   ├── service.py
+│   │   └── providers.py
+│   ├── moviebox/            # Moviebox feature
+│   │   ├── routes.py
+│   │   └── service.py
+│   └── player/              # Player feature
+│       ├── routes.py
+│       └── templates/player.html
+└── proxy/                   # CDN Proxy feature
+    ├── routes.py
+    ├── middleware.py
+    └── headers.py
+tests/                       # Pytest suite
 ```
 
-If one returns an error, move to the next. Availability varies per title — a provider that works for one movie may fail for another.
+---
 
-### Provider Test Results (Movies)
+## 🧪 Testing
 
-| Title | Yoru | Neon | Cypher | Breach |
-|-------|------|------|--------|--------|
-| Interstellar | 1080p, 720p, 480p | 720p, 360p, auto | ❌ | 1080p, 480p |
-| Inception | 4K, 1080p, 720p, 480p | 480p, 270p, auto | ❌ | 1080p |
-| The Amazing Spider-Man | 4K, 1080p, 720p, 480p | ❌ | 1080p, 720p, 480p, 360p | ❌ |
-
-### Provider Test Results (TV)
-
-| Title | Episode | Yoru | Neon | Cypher | Breach |
-|-------|---------|------|------|--------|--------|
-| Breaking Bad | S1E1 | 4K, 1080p, 720p, 480p (75 subs) | 720p, 360p, auto (3 subs) | 1080p, 720p, 480p, 360p (13 subs) | ❌ |
-| Stranger Things | S1E1 | ❌ | 720p, 360p, auto (6 subs) | 1080p, 480p (16 subs) | — |
-| Friends | S1E1 | 720p (148 subs) | — | — | — |
-| The Simpsons | S1E1 | 1080p, 720p, 480p (62 subs) | — | — | — |
-
-## Quality Labels
-
-Sources are sorted highest quality first. The quality detection from master `.m3u8` manifests uses resolution height:
-
-| Height   | Label     |
-|----------|-----------|
-| ≥ 2160   | `4K`      |
-| ≥ 1080   | `1080p`   |
-| ≥ 720    | `720p`    |
-| ≥ 480    | `480p`    |
-| ≥ 360    | `360p`    |
-| < 360    | `{h}p`    |
-| unknown  | `Auto`    |
-
-Breach sources use non-standard labels that are automatically mapped:
-
-| Original | Mapped |
-|----------|--------|
-| `playhq` | `1080p` |
-| `bk`     | `480p`  |
-| `hd`     | `720p`  |
-
-## Deployment
-
-### Local Development
+Run the full pytest suite:
 
 ```bash
-pip install -e .
-uvicorn main:app --host 0.0.0.0 --port 8080
+.venv/bin/pytest
 ```
 
-Or using the installed script:
+---
 
-```bash
-videasy
-```
-
-### Shared Hosting (cPanel + Passenger)
-
-1. Upload all project files to your hosting root
-2. In cPanel → Setup Python App:
-   - Python version: 3.11+
-   - Application root: `/home/user/repositories/Videasy.net-Decryptor`
-   - Entry point: `passenger_wsgi.py`
-3. Dependencies are installed automatically from `pyproject.toml`
-4. Restart the app: `touch tmp/restart.txt`
-
-The `passenger_wsgi.py` file wraps the ASGI FastAPI app for WSGI compatibility using `a2wsgi`.
-
-#### Required Files for Passenger
-
-```
-main.py              # entry point for uvicorn
-passenger_wsgi.py    # entry point for Passenger
-app/                 # application package
-tmp/restart.txt      # touch to restart
-pyproject.toml       # dependencies
-```
-
-### Environment
-
-No environment variables are required. All configuration is in `app/config.py` with sensible defaults.
-
-## Development
-
-### Project Structure
-
-```
-main.py                # uvicorn entry point
-passenger_wsgi.py      # Passenger entry point
-app/
-├── __init__.py
-├── application.py     # FastAPI app, routes, middleware, error handlers
-├── config.py          # Settings (BaseModel)
-├── decrypt.py         # Decryption logic + m3u8 parser
-├── models.py          # Pydantic request/response models
-└── providers.py       # Provider constants
-tmp/
-└── restart.txt        # Passenger restart marker
-pyproject.toml          # Dependencies & build config
-README.md               # This file
-```
-
-### Dependencies
-
-- `fastapi` — web framework
-- `uvicorn[standard]` — ASGI server
-- `httpx` — async HTTP client
-- `a2wsgi` — ASGI→WSGI bridge for Passenger
-
-All dependencies are specified in `pyproject.toml` and managed via `uv`.
-
-### Adding a New Provider
-
-1. Add a `Provider` constant in `app/providers.py`:
-
-   ```python
-   MY_PROVIDER = Provider("MyProvider", "endpoint-slug")
-   AVAILABLE.append(MY_PROVIDER)
-   ```
-
-2. Update `PROVIDER_MAP`:
-
-   ```python
-   PROVIDER_MAP = {p.name.lower(): p for p in AVAILABLE}
-   ```
-
-3. Add quality label mappings in `app/decrypt.py` if the provider uses non-standard labels.
-
-### Testing
-
-```bash
-uv run python3 -c "
-import asyncio
-from httpx import ASGITransport, AsyncClient
-from app.application import app
-
-async def t():
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url='http://test') as c:
-        app.state.client = AsyncClient(timeout=30)
-        app.state.cache = {}
-        r = await c.get('/sources?tmdbId=157336&mediaType=movie&title=Interstellar&provider=Yoru')
-        print(r.status_code, r.json()['data']['sources'][0]['quality'])
-asyncio.run(t())
-"
-```
-
-## Rate Limiting
-
-The upstream API (`api.wingsdatabase.com`) enforces rate limiting. If you receive a `429` response, wait 10–30 seconds before retrying. The seed endpoint is especially sensitive — seeds are cached in-memory for their TTL duration to minimise redundant requests.
-
-## Technical Notes
-
-- **No WASM/JS dependencies**: The decryption pipeline uses `enc-dec.app` directly — no `wasmtime`, `py_mini_racer`, or Node.js required.
-- **Master m3u8 expansion**: If a source URL contains `/master.m3u8`, the manifest is fetched and parsed for `#EXT-X-STREAM-INF` entries with `RESOLUTION` to extract and label each quality variant.
-- **Title encoding**: The title is double URL-encoded (`quote(quote(title))`) before being sent to the upstream API.
-- **Required headers**: All upstream requests include `Origin`, `Referer`, and a Chrome 137 User-Agent to mimic a legitimate browser request.
-
-## License
+## 📜 License
 
 MIT
