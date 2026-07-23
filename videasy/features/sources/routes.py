@@ -73,16 +73,21 @@ async def get_sources(
     except (httpx.RequestError, ConnectionError) as e:
         raise HTTPException(status_code=502, detail=f"{prov.name}: connection error — {e}")
 
-    sources_list = [
-        MediaSourceItem(
-            quality=s.get("quality", "Auto"),
-            url=s.get("url", ""),
-            type="hls" if ".m3u8" in s.get("url", "").lower() else "mp4",
-            headers=s.get("headers"),
-            source="play",
+    from videasy.utils.quality import parse_quality_and_size
+
+    sources_list = []
+    for s in raw.get("sources", []):
+        q, sz = parse_quality_and_size(s.get("quality", "Auto"))
+        sources_list.append(
+            MediaSourceItem(
+                quality=q,
+                size=sz or s.get("size"),
+                url=s.get("url", ""),
+                type="hls" if ".m3u8" in s.get("url", "").lower() else "mp4",
+                headers=s.get("headers"),
+                source="play",
+            )
         )
-        for s in raw.get("sources", [])
-    ]
 
     subtitles_list = [
         MediaSubtitleItem(

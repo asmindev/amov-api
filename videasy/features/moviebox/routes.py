@@ -46,16 +46,21 @@ async def moviebox_sources(
         subject_type = data.get("subjectType", 1)
         media_type = "tv" if subject_type == 2 else "movie"
 
-        sources_list = [
-            MediaSourceItem(
-                quality=s.get("quality", "Auto"),
-                url=s.get("url", ""),
-                type=s.get("type", "mp4"),
-                headers=s.get("headers"),
-                source=s.get("source", "play"),
+        from videasy.utils.quality import parse_quality_and_size
+
+        sources_list = []
+        for s in data.get("sources", []):
+            q, sz = parse_quality_and_size(s.get("quality", "Auto"))
+            sources_list.append(
+                MediaSourceItem(
+                    quality=q,
+                    size=sz or s.get("size"),
+                    url=s.get("url", ""),
+                    type=s.get("type", "mp4"),
+                    headers=s.get("headers"),
+                    source=s.get("source", "play"),
+                )
             )
-            for s in data.get("sources", [])
-        ]
 
         subtitles_list = [
             MediaSubtitleItem(

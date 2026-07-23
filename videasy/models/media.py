@@ -22,6 +22,7 @@ class EpisodeInfo(BaseModel):
 
 class MediaSourceItem(BaseModel):
     quality: str = Field(..., description="Quality label (e.g. 1080p, 720p, 4K, Auto)")
+    size: str | None = Field(default=None, description="File size if available (e.g. 869MB, 2106MB)")
     url: str = Field(..., description="Direct or proxied stream URL (.mp4, .m3u8, .mpd)")
     type: str = Field(default="mp4", description="Stream type: mp4, hls, or dash")
     headers: dict[str, str] | None = Field(default=None, description="Optional custom headers required for playback")

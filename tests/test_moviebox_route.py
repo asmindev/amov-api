@@ -34,7 +34,8 @@ async def test_moviebox_sources_route(client):
         assert data["episode"]["season"] == 1
         assert data["episode"]["episode"] == 1
         assert len(data["sources"]) == 1
-        assert data["sources"][0]["quality"] == "1080p (619MB)"
+        assert data["sources"][0]["quality"] == "1080p"
+        assert data["sources"][0]["size"] == "619MB"
         assert len(data["subtitles"]) == 1
         assert data["subtitles"][0]["language"] == "Indonesian"
 

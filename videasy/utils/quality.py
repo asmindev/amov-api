@@ -39,3 +39,15 @@ def normalize_quality(quality: str, url: str = "") -> str:
 
 def quality_sort_key(quality: str) -> int:
     return QUALITY_ORDER.get(quality, 99)
+
+
+def parse_quality_and_size(raw_quality: str) -> tuple[str, str | None]:
+    """Parses '1080p (869MB)' into ('1080p', '869MB')."""
+    m = re.search(r"^(.*?)\s*\(([^)]+)\)$", raw_quality.strip())
+    if m:
+        clean_q = m.group(1).strip()
+        val = m.group(2).strip()
+        if re.search(r"\d+\s*(?:KB|MB|GB|TB|B)", val, re.IGNORECASE):
+            return clean_q, val
+        return clean_q, None
+    return raw_quality.strip(), None
