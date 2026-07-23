@@ -66,7 +66,9 @@ async def test_get_sources_route(client):
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["tmdbId"] == "157336"
-        assert data["provider"] == "Yoru"
-        assert len(data["data"]["sources"]) == 1
-        assert data["data"]["sources"][0]["quality"] == "1080p"
+        assert data["meta"]["tmdbId"] == "157336"
+        assert data["meta"]["provider"] == "Yoru"
+        assert data["meta"]["title"] == "Interstellar"
+        assert data["episode"] is None
+        assert len(data["sources"]) == 1
+        assert data["sources"][0]["quality"] == "1080p"

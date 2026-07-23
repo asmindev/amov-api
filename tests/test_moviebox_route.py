@@ -1,0 +1,37 @@
+from __future__ import annotations
+
+from unittest.mock import patch
+
+import pytest
+
+
+@pytest.mark.anyio
+async def test_moviebox_sources_route(client):
+    with patch("videasy.features.moviebox.service.fetch_sources") as mock_fetch:
+        mock_fetch.return_value = {
+            "subjectId": "7850278583678682192",
+            "title": "Avatar: The Last Airbender S1-S2",
+            "year": "2024",
+            "subjectType": 2,
+            "cover": "https://pbcdnw.aoneroom.com/cover.jpg",
+            "sources": [
+                {"quality": "1080p (619MB)", "url": "https://bcdnw.hakunaymatata.com/test.mp4", "type": "mp4", "source": "play"}
+            ],
+            "subtitles": [
+                {"lang": "id", "language": "Indonesian", "url": "https://cacdn.hakunaymatata.com/sub.srt"}
+            ],
+        }
+
+        r = await client.get("/moviebox/sources?subjectId=7850278583678682192&seasonId=1&episodeId=1")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["meta"]["title"] == "Avatar: The Last Airbender S1-S2"
+        assert data["meta"]["provider"] == "Moviebox"
+        assert data["meta"]["mediaType"] == "tv"
+        assert data["meta"]["year"] == "2024"
+        assert data["episode"]["season"] == 1
+        assert data["episode"]["episode"] == 1
+        assert len(data["sources"]) == 1
+        assert data["sources"][0]["quality"] == "1080p (619MB)"
+        assert len(data["subtitles"]) == 1
+        assert data["subtitles"][0]["language"] == "Indonesian"

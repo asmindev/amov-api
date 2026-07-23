@@ -5,11 +5,20 @@ from typing import Any
 import httpx
 from fastapi import APIRouter, HTTPException, Query, Request
 
+from videasy.models.media import (
+    EpisodeInfo,
+    MediaMeta,
+    MediaSourceItem,
+    MediaSubtitleItem,
+    UnifiedMediaResponse,
+)
+
 router = APIRouter(tags=["Moviebox"])
 
 
 @router.get(
     "/moviebox/sources",
+    response_model=UnifiedMediaResponse,
     summary="Fetch sources from Moviebox",
     description="Fetch video sources from themoviebox.xyz. Provide subjectId, a full URL, or a slug.",
 )
@@ -20,7 +29,7 @@ async def moviebox_sources(
     seasonId: str = Query(default="0", pattern=r"^\d+$", description="Season number (TV only, default: 0)"),
     episodeId: str = Query(default="0", pattern=r"^\d+$", description="Episode number (TV only, default: 0)"),
     cookie: str = Query(default="", description="Optional user Cookie header"),
-) -> dict[str, Any]:
+) -> UnifiedMediaResponse:
     from videasy.features.moviebox.service import fetch_sources as mb_fetch
 
     if not subjectId and not url:
@@ -33,8 +42,51 @@ async def moviebox_sources(
             request.app.state.client, input_str,
             se=int(seasonId), ep=int(episodeId), cookie=cookie,
         )
-        sid = data.get("subjectId", input_str)
-        return {"subjectId": sid, "status": "ok", "data": data}
+        subject_type = data.get("subjectType", 1)
+        media_type = "tv" if subject_type == 2 else "movie"
+
+        sources_list = [
+            MediaSourceItem(
+                quality=s.get("quality", "Auto"),
+                url=s.get("url", ""),
+                type=s.get("type", "mp4"),
+                headers=s.get("headers"),
+                source=s.get("source", "play"),
+            )
+            for s in data.get("sources", [])
+        ]
+
+        subtitles_list = [
+            MediaSubtitleItem(
+                lang=(sub.get("lang") or "en")[:2].lower(),
+                language=sub.get("language") or "Subtitle",
+                url=sub.get("url", ""),
+            )
+            for sub in data.get("subtitles", [])
+            if sub.get("url")
+        ]
+
+        se_num = int(seasonId) if seasonId.isdigit() and int(seasonId) > 0 else (1 if media_type == "tv" else None)
+        ep_num = int(episodeId) if episodeId.isdigit() and int(episodeId) > 0 else (1 if media_type == "tv" else None)
+
+        episode_info = EpisodeInfo(season=se_num, episode=ep_num) if media_type == "tv" else None
+
+        meta = MediaMeta(
+            title=data.get("title", ""),
+            provider="Moviebox",
+            mediaType=media_type,
+            tmdbId=None,
+            imdbId=None,
+            year=data.get("year") or None,
+            cover=data.get("cover") or None,
+        )
+
+        return UnifiedMediaResponse(
+            meta=meta,
+            episode=episode_info,
+            sources=sources_list,
+            subtitles=subtitles_list,
+        )
     except httpx.TimeoutException:
         raise HTTPException(status_code=504, detail="Moviebox API request timed out")
     except httpx.HTTPStatusError as e:

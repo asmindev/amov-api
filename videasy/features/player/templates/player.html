@@ -274,13 +274,14 @@
       try {
         const resp = await fetch(endpoint);
         const data = await resp.json();
-        let sources = data.data?.sources || data.sources || [];
-        let subs = data.data?.subtitles || data.subtitles || [];
+        let sources = data.sources || data.data?.sources || [];
+        let subs = data.subtitles || data.data?.subtitles || [];
+        let metaTitle = data.meta?.title ? ('[' + (data.meta.provider || 'API') + '] ' + data.meta.title + ' • ') : '';
         if (sources.length === 0) { status.textContent = 'No sources found'; return; }
         renderSources(sources);
         renderSubtitles(subs);
         playBestSource(sources);
-        status.textContent = sources.length + ' source(s) loaded';
+        status.textContent = metaTitle + sources.length + ' source(s) loaded';
       } catch (e) {
         status.textContent = 'Error: ' + e.message;
       }
