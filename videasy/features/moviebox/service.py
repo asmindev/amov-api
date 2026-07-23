@@ -298,6 +298,8 @@ async def fetch_play_streams(
             sign_cookie = hls.get("signCookie") or ""
             sign_header_key = hls.get("signHeaderKey") or "X-MB-Token"
             st_item: dict[str, Any] = {"quality": quality, "url": stream_url, "type": "hls"}
+            if hls.get("id"):
+                st_item["id"] = str(hls["id"])
             if sign_cookie:
                 st_item["headers"] = {sign_header_key: sign_cookie}
             streams.append(st_item)
@@ -315,6 +317,8 @@ async def fetch_play_streams(
             sign_cookie = dash.get("signCookie") or ""
             sign_header_key = dash.get("signHeaderKey") or "X-MB-Token"
             st_item = {"quality": quality, "url": stream_url, "type": "dash"}
+            if dash.get("id"):
+                st_item["id"] = str(dash["id"])
             if sign_cookie:
                 st_item["headers"] = {sign_header_key: sign_cookie}
             streams.append(st_item)
@@ -333,6 +337,8 @@ async def fetch_play_streams(
             sign_cookie = s.get("signCookie") or ""
             sign_header_key = s.get("signHeaderKey") or "X-MB-Token"
             st_item = {"quality": f"{quality}{size_label}", "url": stream_url, "type": "mp4"}
+            if s.get("id"):
+                st_item["id"] = str(s["id"])
             if sign_cookie:
                 st_item["headers"] = {sign_header_key: sign_cookie}
             streams.append(st_item)
@@ -729,23 +735,42 @@ async def fetch_sources(
     )
 
     # Fetch rich subtitles with real CDN .srt URLs from caption endpoint
-    resource_id = ""
+    subtitles: list[dict[str, str]] = []
+    seen_sub_urls: set[str] = set()
+
     for s in play_streams:
-        if s.get("id"):
-            resource_id = str(s["id"])
-            break
-    if not resource_id:
-        resource_id = subject_id
+        res_id = str(s.get("id", ""))
+        stream_type = str(s.get("type", "")).upper()
+        if res_id:
+            fmt = "DASH" if "DASH" in stream_type else "MP4"
+            subs = await fetch_moviebox_captions(
+                client,
+                subject_id=subject_id,
+                detail_path=detail_path,
+                resource_id=res_id,
+                format_type=fmt,
+            )
+            for sub in subs:
+                if sub["url"] not in seen_sub_urls:
+                    seen_sub_urls.add(sub["url"])
+                    subtitles.append(sub)
+            if subtitles:
+                break
 
-    subtitles = await fetch_moviebox_captions(
-        client,
-        subject_id=subject_id,
-        detail_path=detail_path,
-        resource_id=resource_id,
-    )
-    if subtitles:
-        result["subtitles"] = subtitles
+    if not subtitles and subject_id:
+        subs = await fetch_moviebox_captions(
+            client,
+            subject_id=subject_id,
+            detail_path=detail_path,
+            resource_id="",
+            format_type="MP4",
+        )
+        for sub in subs:
+            if sub["url"] not in seen_sub_urls:
+                seen_sub_urls.add(sub["url"])
+                subtitles.append(sub)
 
+    result["subtitles"] = subtitles
     return result
 
 
