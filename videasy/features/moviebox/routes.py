@@ -76,7 +76,7 @@ async def moviebox_sources(
             provider="Moviebox",
             mediaType=media_type,
             tmdbId=None,
-            imdbId=None,
+            imdbId=data.get("imdbId") or None,
             year=data.get("year") or None,
             cover=data.get("cover") or None,
         )

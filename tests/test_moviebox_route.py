@@ -12,6 +12,7 @@ async def test_moviebox_sources_route(client):
             "subjectId": "7850278583678682192",
             "title": "Avatar: The Last Airbender S1-S2",
             "year": "2024",
+            "imdbId": "tt9018736",
             "subjectType": 2,
             "cover": "https://pbcdnw.aoneroom.com/cover.jpg",
             "sources": [
@@ -28,6 +29,7 @@ async def test_moviebox_sources_route(client):
         assert data["meta"]["title"] == "Avatar: The Last Airbender S1-S2"
         assert data["meta"]["provider"] == "Moviebox"
         assert data["meta"]["mediaType"] == "tv"
+        assert data["meta"]["imdbId"] == "tt9018736"
         assert data["meta"]["year"] == "2024"
         assert data["episode"]["season"] == 1
         assert data["episode"]["episode"] == 1

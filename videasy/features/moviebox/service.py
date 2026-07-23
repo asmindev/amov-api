@@ -565,6 +565,39 @@ async def fetch_moviebox_captions(
     return []
 
 
+async def resolve_moviebox_imdb_id(
+    client: httpx.AsyncClient,
+    title: str,
+    release_date: str = "",
+    subject_type: int = 1,
+) -> str:
+    """Automatically resolve IMDB ID (e.g. tt9018736) for a Moviebox title via Cinemeta metadata lookup."""
+    from urllib.parse import quote
+
+    clean_title = re.sub(r"\s+S\d+(-S\d+)?$", "", title, flags=re.IGNORECASE).strip()
+    clean_title = re.sub(r"\s+Season\s+\d+$", "", clean_title, flags=re.IGNORECASE).strip()
+    year = (release_date or "")[:4]
+    is_tv = subject_type == 2
+    media_type = "series" if is_tv else "movie"
+
+    try:
+        url = f"https://v3-cinemeta.strem.io/catalog/{media_type}/top/search={quote(clean_title)}.json"
+        resp = await client.get(url, timeout=5.0)
+        if resp.status_code == 200:
+            metas = resp.json().get("metas", [])
+            for m in metas:
+                imdb_id = m.get("id", "")
+                m_year = str(m.get("year", ""))
+                if year and year in m_year:
+                    return imdb_id
+            if metas:
+                return metas[0].get("id", "")
+    except Exception as exc:
+        logger.warning("moviebox IMDB resolution failed: %s", exc)
+
+    return ""
+
+
 async def fetch_sources(
     client: httpx.AsyncClient,
     url_or_id: str,
@@ -626,6 +659,14 @@ async def fetch_sources(
                 )
 
     result = extract_sources(detail, include_play_streams=play_streams)
+
+    # Automatically resolve IMDB ID for Moviebox entry
+    result["imdbId"] = await resolve_moviebox_imdb_id(
+        client,
+        title=result.get("title", ""),
+        release_date=result.get("releaseDate", ""),
+        subject_type=result.get("subjectType", 1),
+    )
 
     # Fetch rich subtitles with real CDN .srt URLs from caption endpoint
     resource_id = ""
