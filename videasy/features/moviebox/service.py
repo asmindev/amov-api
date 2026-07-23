@@ -590,78 +590,42 @@ async def fetch_sources(
 async def search_titles(
     client: httpx.AsyncClient, query: str, page: int = 1, per_page: int = 12
 ) -> list[dict[str, Any]]:
-    """Search for titles on TheMovieBox.
-
-    Routes via the themoviebox.xyz proxy (which supports the search endpoint)
-    with the cached guest JWT token. Falls back to the ``everyone-search``
-    endpoint (returns popular query suggestions, not full results) if search
-    is unavailable.
-    """
-    from urllib.parse import quote as _quote
-    encoded = _quote(query)
+    """Search for titles on TheMovieBox using POST /wefeed-h5api-bff/subject/search."""
+    token = await ensure_guest_token(client)
+    if not token:
+        try:
+            r0 = await client.get(
+                f"{API_BASE}/wefeed-h5api-bff/subject/play?subjectId=8313012068559605176",
+                headers=_build_headers(),
+            )
+            set_cookie = r0.headers.get("set-cookie", "")
+            m = re.search(r"token=([A-Za-z0-9._-]+)", set_cookie)
+            if m:
+                token = m.group(1)
+                _guest_token[0] = token
+        except Exception:
+            pass
 
     headers = _build_headers()
-    if _guest_token[0]:
-        headers["Cookie"] = f"token={_guest_token[0]}"
+    if token:
+        headers["token"] = token
+        headers["Authorization"] = f"Bearer {token}"
+        headers["Cookie"] = f"i18n_lang=en; token={token}"
 
-    # Try the main search endpoint via the themoviebox.xyz proxy
-    url = f"{PLAY_BASE}{SEARCH_ENDPOINT}?keyword={encoded}&page={page}&perPage={per_page}"
+    url = f"{API_BASE}/wefeed-h5api-bff/subject/search"
     logger.info("searching moviebox: query=%r page=%s", query, page)
+    payload = {"keyword": query, "page": page, "perPage": per_page}
+
     try:
-        resp = await client.get(url, headers=headers)
-        # Capture any new guest token
-        set_cookie = resp.headers.get("set-cookie", "")
-        m = re.search(r"token=([A-Za-z0-9._-]+)", set_cookie)
-        if m:
-            _guest_token[0] = m.group(1)
-
-        if resp.status_code == 404:
-            raise httpx.HTTPStatusError("404", request=resp.request, response=resp)
-
+        resp = await client.post(url, json=payload, headers=headers)
         resp.raise_for_status()
         data = resp.json()
         if data.get("code") != 0:
             return []
-        items = data.get("data", {}).get("items", []) or data.get("data", []) or []
+        items = data.get("data", {}).get("items", []) or []
         return _format_search_results(items)
-
-    except httpx.HTTPStatusError as e:
-        if e.response.status_code == 404:
-            logger.warning("moviebox search endpoint unavailable, trying everyone-search")
-        else:
-            logger.warning("moviebox search failed: %s", e)
     except Exception as exc:
         logger.warning("moviebox search failed: %s", exc)
-
-    # Fallback: everyone-search (returns popular titles only)
-    fallback_url = f"{API_BASE}/wefeed-h5api-bff/subject/everyone-search?keyword={encoded}&page={page}&perPage={per_page}"
-    try:
-        resp = await client.get(fallback_url, headers=headers)
-        resp.raise_for_status()
-        data = resp.json()
-        if data.get("code") != 0:
-            return []
-        items = data.get("data", {}).get("everyoneSearch", [])
-        # everyone-search only has titles — enrich by fetching detail for each
-        results = []
-        for item in items[:5]:  # limit to avoid too many requests
-            title = item.get("title", "")
-            if title:
-                results.append({
-                    "subjectId": "",
-                    "detailPath": "",
-                    "title": title,
-                    "year": "",
-                    "genre": "",
-                    "imdbRating": "",
-                    "cover": "",
-                    "subjectType": 1,
-                    "hasResource": False,
-                    "url": "",
-                })
-        return results
-    except Exception as exc:
-        logger.warning("moviebox everyone-search fallback failed: %s", exc)
         return []
 
 
