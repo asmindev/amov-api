@@ -35,7 +35,7 @@ router = APIRouter(tags=["Sources"])
 )
 async def get_sources(
     request: Request,
-    title: str = Query(default="", description="Media title (e.g. Interstellar)"),
+    title: str = Query(default="", description="Media title (optional if tmdbId or imdbId is provided)"),
     mediaType: str = Query(..., pattern=r"^(movie|tv)$", description="Media type: movie or tv"),
     tmdbId: str = Query(..., pattern=r"^\d+$", description="TMDB numerical ID"),
     provider: str = Query(..., min_length=1, description="Provider name: Yoru, Neon, Cypher, or Breach"),

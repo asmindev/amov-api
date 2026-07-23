@@ -56,8 +56,8 @@ Fetch decrypted HLS streams and subtitles for a movie or TV show using Wingsdata
 |-------------|--------|----------|-------------|
 | `tmdbId`    | string | ✓        | TMDB numerical ID (e.g. `157336` for Interstellar) |
 | `mediaType` | string | ✓        | `movie` or `tv` |
-| `title`     | string | ✓        | Media title (e.g. `Interstellar`) |
 | `provider`  | string | ✓        | `Yoru`, `Neon`, `Cypher`, or `Breach` |
+| `title`     | string |          | Media title (optional if `tmdbId` or `imdbId` is provided) |
 | `year`      | string |          | Release year (e.g. `2014`) |
 | `seasonId`  | string |          | Season number — TV only (default: `1`) |
 | `episodeId` | string |          | Episode number — TV only (default: `1`) |
@@ -66,7 +66,7 @@ Fetch decrypted HLS streams and subtitles for a movie or TV show using Wingsdata
 #### Example Request
 ```bash
 # Movie
-curl "http://localhost:8000/sources?tmdbId=157336&mediaType=movie&title=Interstellar&year=2014&provider=Yoru"
+curl "http://localhost:8000/sources?tmdbId=157336&mediaType=movie&imdbId=tt0816692&provider=Yoru"
 
 # TV Show
 curl "http://localhost:8000/sources?tmdbId=1396&mediaType=tv&title=Breaking+Bad&year=2008&seasonId=1&episodeId=1&provider=Yoru"
@@ -76,28 +76,28 @@ curl "http://localhost:8000/sources?tmdbId=1396&mediaType=tv&title=Breaking+Bad&
 
 ### 2. `GET /moviebox/sources` (TheMovieBox.xyz)
 
-Fetch MP4 / DASH streams and CDN `.srt` subtitles for Moviebox titles. Supports fetching by `subjectId`, `imdbId` (automatic reverse lookup), or full URL.
+Fetch MP4 / DASH streams and CDN `.srt` subtitles for Moviebox titles. Supports fetching by `imdbId` (automatic reverse lookup), `subjectId`, or full URL.
 
 #### Query Parameters
 
 | Parameter   | Type   | Required | Description |
 |------------|--------|----------|-------------|
+| `imdbId`   | string | *        | IMDB ID (e.g. `tt9018736` or `tt33311069` — automatically resolves to Moviebox title) |
 | `subjectId`| string | *        | Moviebox internal numerical ID (e.g. `7850278583678682192`) |
-| `imdbId`   | string | *        | IMDB ID (e.g. `tt9018736` — automatically resolves to Moviebox title) |
 | `url`      | string | *        | Full `themoviebox.xyz` URL |
 | `seasonId` | string |          | Season number for TV series (default: `0`) |
 | `episodeId`| string |          | Episode number for TV series (default: `0`) |
 | `cookie`   | string |          | Optional user cookie header |
 
-*\* Provide at least one of `subjectId`, `imdbId`, or `url`.*
+*\* Provide at least one of `imdbId`, `subjectId`, or `url`.*
 
 #### Example Request
 ```bash
 # Query by IMDB ID (Reverse Lookup)
-curl "http://localhost:8000/moviebox/sources?imdbId=tt9018736&seasonId=1&episodeId=1"
+curl "http://localhost:8000/moviebox/sources?imdbId=tt33311069"
 
-# Query by Moviebox Subject ID
-curl "http://localhost:8000/moviebox/sources?subjectId=7850278583678682192&seasonId=1&episodeId=1"
+# Query TV Episode by IMDB ID
+curl "http://localhost:8000/moviebox/sources?imdbId=tt9018736&seasonId=1&episodeId=1"
 ```
 
 ---
@@ -123,14 +123,16 @@ Both `/sources` and `/moviebox/sources` return the identical, standardized JSON 
   },
   "sources": [
     {
-      "quality": "1080p (619MB)",
+      "quality": "1080p",
+      "size": "619MB",
       "url": "https://bcdnw.hakunaymatata.com/...",
       "type": "mp4",
       "headers": null,
       "source": "play"
     },
     {
-      "quality": "Auto (DASH)",
+      "quality": "Auto",
+      "size": null,
       "url": "http://localhost:8000/proxy?url=https%3A%2F%2Fsbcdnw2.hakunaymatata.com%2Fdash%2Findex_web.mpd",
       "type": "dash",
       "headers": {
@@ -154,7 +156,7 @@ Both `/sources` and `/moviebox/sources` return the identical, standardized JSON 
 }
 ```
 
-*Note: `episode` is `null` for movies (`mediaType: "movie"`).*
+*Note: `episode` is `null` for movies (`mediaType: "movie"`). Field `size` represents file size (e.g., `"619MB"`, `"2106MB"`) or `null` if unavailable.*
 
 ---
 
@@ -222,7 +224,7 @@ videasy/
 ├── core/
 │   └── cache.py             # In-memory TTLCache implementation
 ├── models/
-│   ├── media.py             # UnifiedMediaResponse models
+│   ├── media.py             # UnifiedMediaResponse models (meta, episode, sources with size, subtitles)
 │   ├── source.py            # Wingsdatabase source models
 │   ├── subtitle.py          # Subtitle models
 │   └── common.py            # Common provider info models
