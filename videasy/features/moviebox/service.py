@@ -471,17 +471,7 @@ def extract_sources(detail: dict[str, Any], include_play_streams: list[dict] | N
     deduped.sort(key=_final_sort_key)
 
     # --- Subtitles ---
-    subtitles_raw = subject.get("subtitles", "")
     subtitles: list[dict[str, str]] = []
-    if subtitles_raw:
-        for lang_name in subtitles_raw.split(","):
-            lang_name = lang_name.strip()
-            if lang_name:
-                subtitles.append({
-                    "lang": lang_name[:2].lower(),
-                    "language": lang_name,
-                    "url": "",
-                })
 
     # --- Season / episode info ---
     seasons_raw = resource.get("seasons", [])
