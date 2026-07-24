@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import sys
@@ -186,15 +187,26 @@ class RequestLoggingMiddleware:
 
         try:
             await self.app(scope, receive, send_wrapper)
+        except (ConnectionResetError, BrokenPipeError, asyncio.CancelledError):
+            status_code = 499
         except Exception:
             status_code = 500
             raise
         finally:
             elapsed = round((time.perf_counter() - start) * 1000, 1)
 
+            if status_code == 499:
+                level = logging.DEBUG
+            elif status_code >= 500:
+                level = logging.ERROR
+            elif status_code >= 400:
+                level = logging.WARNING
+            else:
+                level = logging.INFO
+
             log_record = logging.LogRecord(
                 name="videasy",
-                level=logging.INFO if status_code < 400 else logging.WARNING,
+                level=level,
                 pathname="",
                 lineno=0,
                 msg="",
