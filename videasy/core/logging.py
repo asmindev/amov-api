@@ -37,7 +37,7 @@ class RequestFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         ts = self.formatTime(record, "%Y-%m-%dT%H:%M:%S.%f")[:-3]
-        level = record.levelname.ljust(8)
+        level = record.levelname
         module = getattr(record, "module", record.name)
         func = getattr(record, "funcName", "")
         lineno = getattr(record, "lineno", "")
@@ -75,12 +75,12 @@ class RequestFormatter(logging.Formatter):
 
 class FileFormatter(logging.Formatter):
     """Plain text formatter for file output (no ANSI colors).
-    [2024-01-15T10:30:45.123] [INFO    ] [GET] [sources/service.py:112] [GET /sources] [127.0.0.1] msg
+    [2024-01-15T10:30:45.123] [INFO] [GET] [sources/service.py:112] [GET /sources] [127.0.0.1] msg
     """
 
     def format(self, record: logging.LogRecord) -> str:
         ts = self.formatTime(record, "%Y-%m-%dT%H:%M:%S.%f")[:-3]
-        level = record.levelname.ljust(8)
+        level = record.levelname
         module = getattr(record, "module", record.name)
         func = getattr(record, "funcName", "")
         lineno = getattr(record, "lineno", "")
