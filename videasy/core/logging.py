@@ -153,7 +153,7 @@ def setup_logging(log_dir: str = "logs", level: int = logging.DEBUG) -> None:
     root.addHandler(fh)
 
     # ── Suppress noisy libraries ──
-    for name in ("httpx", "httpcore", "hpack", "uvicorn.access"):
+    for name in ("httpx", "httpcore", "hpack", "uvicorn.access", "uvicorn.error"):
         logging.getLogger(name).setLevel(logging.WARNING)
 
     root.info("logging initialized — console + %s/app.log", log_dir)
