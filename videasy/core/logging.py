@@ -57,13 +57,13 @@ class RequestFormatter(logging.Formatter):
             if self.use_colors and status:
                 code = int(status)
                 sc = self.STATUS_COLORS.get(code // 100, "")
-                status_str = f"{sc}{status}{self.RESET}"
+                status_str = f"{sc}{status} {status_word}{self.RESET}"
             else:
-                status_str = status
+                status_str = f"{status} {status_word}"
             route_str = f"\033[34m{route}\033[0m" if self.use_colors else route
             return (
                 f"[{ts}] [{level_str}] "
-                f'"{method} {route_str} HTTP/1.1" {status_str} {status_word} {duration}ms'
+                f'"{method} {route_str} HTTP/1.1" {status_str} {duration}ms'
             )
 
         # App log: [module/func.py:line] msg
