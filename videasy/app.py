@@ -31,14 +31,22 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Videasy Decryptor API",
         description=(
-            "Decrypt Videasy.net video streams. Fetch encrypted sources from "
-            "`api.wingsdatabase.com`, decrypt via `enc-dec.app`, returns "
-            "quality-labelled HLS streams + subtitles."
+            "Decrypt video streams from Videasy.net (Wingsdatabase providers: "
+            "Yoru, Neon, Cypher, Breach, Moviebox) and fetch sources from "
+            "TheMovieBox.xyz (MP4, DASH, HLS + CDN subtitles).\n\n"
+            "Both `/sources` and `/moviebox/sources` return a unified "
+            "`UnifiedMediaResponse` with meta, episode info, quality-labeled "
+            "streams, and subtitles.\n\n"
+            "The `/proxy` endpoint streams CDN content with Range support and "
+            "CORS bypass. DASH manifests are rewritten to route segments "
+            "through `/dash/{token}/...`."
         ),
         version="3.0.0",
         lifespan=lifespan,
         contact={"name": "Videasy Decryptor", "url": "https://github.com/"},
         license_info={"name": "MIT"},
+        docs_url="/docs",
+        redoc_url="/redoc",
     )
 
     # Middleware (last added = first executed)

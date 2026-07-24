@@ -1,6 +1,24 @@
 __pycache__/
 *.pyc
+*.pyo
 .venv/
 *.egg-info/
 dist/
 build/
+
+# Environment
+.env
+.env.*
+
+# Test / cache
+.pytest_cache/
+
+# Temp / misc
+tmp/
+.mimocode/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
