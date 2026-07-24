@@ -63,3 +63,28 @@ async def test_moviebox_sources_route_by_imdb_id(client):
         assert data["meta"]["provider"] == "Moviebox"
         mock_fetch.assert_called_once()
         assert mock_fetch.call_args[0][1] == "tt9018736"
+
+
+def test_extract_token_from_response():
+    import httpx
+    from videasy.features.moviebox.service import _extract_token_from_response
+
+    # Test extraction from Set-Cookie header
+    resp1 = httpx.Response(
+        200,
+        headers=[("set-cookie", "token=eyJhbGci...; Path=/")],
+        request=httpx.Request("GET", "https://h5-api.aoneroom.com"),
+    )
+    assert _extract_token_from_response(resp1) == "eyJhbGci..."
+
+    # Test handling when multiple token cookies are in response headers
+    resp2 = httpx.Response(
+        200,
+        headers=[
+            ("set-cookie", "token=tok1; Domain=.aoneroom.com; Path=/"),
+            ("set-cookie", "token=tok2; Domain=h5-api.aoneroom.com; Path=/bff"),
+        ],
+        request=httpx.Request("GET", "https://h5-api.aoneroom.com"),
+    )
+    assert _extract_token_from_response(resp2) == "tok1"
+

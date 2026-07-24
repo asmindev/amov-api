@@ -190,28 +190,53 @@ async def fetch_detail(
     raise RuntimeError("Moviebox detail not found (404)")
 
 
-def _invalidate_guest_token() -> None:
+def _extract_token_from_response(resp: httpx.Response, client: httpx.AsyncClient | None = None) -> str:
+    """Safely extract token from response Set-Cookie headers or client cookies without CookieConflict error."""
+    for header in resp.headers.get_list("set-cookie"):
+        m = re.search(r"token=([A-Za-z0-9._-]+)", header)
+        if m:
+            return m.group(1)
+    if client:
+        try:
+            tok = client.cookies.get("token")
+            if tok:
+                return tok
+        except Exception:
+            pass
+    try:
+        token = resp.cookies.get("token")
+        if token:
+            return token
+    except Exception:
+        pass
+    return ""
+
+
+def _invalidate_guest_token(client: httpx.AsyncClient | None = None) -> None:
     """Clear the cached guest token so it is re-fetched on next use."""
     global _guest_token_expiry
     _guest_token[0] = ""
     _guest_token_expiry = 0.0
+    if client:
+        try:
+            client.cookies.clear()
+        except Exception:
+            pass
 
 
-async def ensure_guest_token(client: httpx.AsyncClient) -> str:
+async def ensure_guest_token(client: httpx.AsyncClient, force_refresh: bool = False) -> str:
     """Fetch and cache a fresh guest JWT token from /wefeed-h5api-bff/country-code if needed."""
     global _guest_token_expiry
-    if _guest_token[0] and time.monotonic() < _guest_token_expiry:
+    if force_refresh:
+        _invalidate_guest_token(client)
+    elif _guest_token[0] and time.monotonic() < _guest_token_expiry:
         return _guest_token[0]
+
     try:
         url = f"{API_BASE}/wefeed-h5api-bff/country-code"
         resp = await client.get(url, headers=_build_headers(), timeout=10.0)
         if resp.status_code == 200:
-            token = resp.cookies.get("token") or ""
-            if not token:
-                set_cookie = resp.headers.get("set-cookie", "")
-                m = re.search(r"token=([A-Za-z0-9._-]+)", set_cookie)
-                if m:
-                    token = m.group(1)
+            token = _extract_token_from_response(resp, client)
             if token:
                 _guest_token[0] = token
                 _guest_token_expiry = time.monotonic() + _GUEST_TOKEN_TTL
@@ -219,6 +244,20 @@ async def ensure_guest_token(client: httpx.AsyncClient) -> str:
                 return token
     except Exception as exc:
         logger.debug("failed to initialize guest token via country-code: %s", exc)
+
+    try:
+        url = f"{API_BASE}/wefeed-h5api-bff/subject/play?subjectId=8313012068559605176"
+        resp = await client.get(url, headers=_build_headers(), timeout=10.0)
+        if resp.status_code == 200:
+            token = _extract_token_from_response(resp, client)
+            if token:
+                _guest_token[0] = token
+                _guest_token_expiry = time.monotonic() + _GUEST_TOKEN_TTL
+                logger.debug("automatically initialized guest JWT token via play fallback")
+                return token
+    except Exception as exc:
+        logger.debug("failed to initialize guest token via play fallback: %s", exc)
+
     return ""
 
 
@@ -274,10 +313,8 @@ async def fetch_play_streams(
         resp = await client.get(url, headers=headers, timeout=20.0)
         resp.raise_for_status()
 
-        # Step 1: Extract returned token from Set-Cookie header
-        set_cookie = resp.headers.get("set-cookie", "")
-        m = re.search(r"token=([A-Za-z0-9._-]+)", set_cookie)
-        returned_token = m.group(1) if m else ""
+        # Step 1: Extract returned token from response
+        returned_token = _extract_token_from_response(resp)
         if returned_token:
             _guest_token[0] = returned_token
             _guest_token_expiry = time.monotonic() + _GUEST_TOKEN_TTL
@@ -796,23 +833,7 @@ async def search_titles(
     client: httpx.AsyncClient, query: str, page: int = 1, per_page: int = 12
 ) -> list[dict[str, Any]]:
     """Search for titles on TheMovieBox using POST /wefeed-h5api-bff/subject/search."""
-    global _guest_token_expiry
     token = await ensure_guest_token(client)
-    if not token:
-        try:
-            r0 = await client.get(
-                f"{API_BASE}/wefeed-h5api-bff/subject/play?subjectId=8313012068559605176",
-                headers=_build_headers(),
-                timeout=10.0,
-            )
-            set_cookie = r0.headers.get("set-cookie", "")
-            m = re.search(r"token=([A-Za-z0-9._-]+)", set_cookie)
-            if m:
-                token = m.group(1)
-                _guest_token[0] = token
-                _guest_token_expiry = time.monotonic() + _GUEST_TOKEN_TTL
-        except Exception:
-            pass
 
     headers = _build_headers()
     if token:
@@ -829,8 +850,8 @@ async def search_titles(
         resp = await client.post(url, json=payload, headers=headers, timeout=15.0)
         if resp.status_code == 400:
             logger.info("Moviebox search received 400 invalid token; refreshing guest token and retrying...")
-            _invalidate_guest_token()
-            token = await ensure_guest_token(client)
+            _invalidate_guest_token(client)
+            token = await ensure_guest_token(client, force_refresh=True)
             headers = _build_headers()
             if token:
                 headers["token"] = token

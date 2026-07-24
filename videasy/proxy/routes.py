@@ -17,13 +17,17 @@ router = APIRouter(tags=["Proxy"])
 @router.get(
     "/proxy",
     summary="HLS and MP4 stream proxy",
-    description="Proxy HLS manifests, MP4 videos, and video segments with Range request forwarding, Sec-Fetch-Dest headers, and CORS bypass.",
+    description="Proxy HLS manifests, MP4 videos, and video segments with Range request forwarding, Sec-Fetch-Dest headers, CORS bypass, and auto-refresh for expired CDN tokens (t=).",
     response_class=StreamingResponse,
 )
 async def proxy_hls(
     request: Request,
     url: str = Query(..., description="Full URL of the resource to proxy"),
     headers: str = Query(default="", description="Optional custom JSON headers to forward"),
+    imdbId: str | None = Query(default=None, description="Optional IMDb ID for automatic token refresh if CDN URL expires"),
+    subjectId: str | None = Query(default=None, description="Optional Moviebox Subject ID for automatic token refresh if CDN URL expires"),
+    season: int | None = Query(default=None, description="Optional Season number"),
+    episode: int | None = Query(default=None, description="Optional Episode number"),
 ) -> Response:
     """Stream any URL through the backend with Range support and domain-specific headers."""
     client: httpx.AsyncClient = request.app.state.proxy_client
@@ -95,4 +99,12 @@ async def proxy_hls(
         )
 
     # ── Non-MPD: stream directly ──
-    return await do_proxy_stream(request, url, headers)
+    return await do_proxy_stream(
+        request,
+        url,
+        headers,
+        imdb_id=imdbId,
+        subject_id=subjectId,
+        season=season,
+        episode=episode,
+    )

@@ -79,6 +79,12 @@
     let hlsPlayer = null;
     let dashPlayer = null;
     let originalRawSource = null;
+    let currentSourcesList = [];
+    let currentSourceIndex = 0;
+    let autoSwitchTimeout = null;
+    let stallWatchdogTimer = null;
+    let lastCurrentTime = -1;
+    let stallCount = 0;
     const video = document.getElementById('video');
 
     function isDirectMedia(url) {
@@ -89,20 +95,135 @@
       return true;
     }
 
+    function resetStallWatchdog() {
+      if (stallWatchdogTimer) clearInterval(stallWatchdogTimer);
+      lastCurrentTime = -1;
+      stallCount = 0;
+
+      stallWatchdogTimer = setInterval(() => {
+        if (!video || video.paused || video.ended) return;
+        if (video.currentTime === lastCurrentTime && video.readyState < 3) {
+          stallCount++;
+          if (stallCount >= 4) {
+            console.warn('Playback stalled for 4s. Auto-switching provider...');
+            if (stallWatchdogTimer) clearInterval(stallWatchdogTimer);
+            handlePlaybackError();
+          }
+        } else {
+          lastCurrentTime = video.currentTime;
+          stallCount = 0;
+        }
+      }, 1000);
+    }
+
     function cleanPlayers() {
       if (hlsPlayer) { hlsPlayer.destroy(); hlsPlayer = null; }
       if (dashPlayer) { dashPlayer.reset(); dashPlayer = null; }
+      if (autoSwitchTimeout) { clearTimeout(autoSwitchTimeout); autoSwitchTimeout = null; }
+      if (stallWatchdogTimer) { clearInterval(stallWatchdogTimer); stallWatchdogTimer = null; }
       video.removeAttribute('src');
       video.load();
     }
 
+    let lastFetchEndpoint = null;
+    let isRefreshingToken = false;
+
+    async function refreshSignedSources() {
+      if (!lastFetchEndpoint || isRefreshingToken) return false;
+      isRefreshingToken = true;
+      const status = document.getElementById('status');
+      status.innerHTML = '🔄 Token URL (t=) expired. Auto-refreshing CDN signed URL...';
+      try {
+        const resp = await fetch(lastFetchEndpoint);
+        const data = await resp.json();
+        let sources = data.sources || data.data?.sources || [];
+        if (sources.length > 0) {
+          const prevTime = video ? video.currentTime : 0;
+          currentSourcesList = sources;
+          renderSources(sources);
+          const sameQualitySource = sources.find(s => s.quality === originalRawSource?.quality) || sources[0];
+          play(sameQualitySource);
+          if (prevTime > 0 && video) {
+            video.currentTime = prevTime;
+          }
+          isRefreshingToken = false;
+          return true;
+        }
+      } catch (e) {
+        console.warn("Failed to auto-refresh stream token:", e);
+      }
+      isRefreshingToken = false;
+      return false;
+    }
+
+    async function handlePlaybackError() {
+      const status = document.getElementById('status');
+      const useProxyCheckbox = document.getElementById('use-proxy');
+
+      // Attempt 0: Refresh expired CDN signed URL (t=) if endpoint is available
+      if (lastFetchEndpoint && !isRefreshingToken) {
+        const refreshed = await refreshSignedSources();
+        if (refreshed) return;
+      }
+
+      // Attempt 1: Retry current source with Proxy if not already tried
+      if (originalRawSource && !useProxyCheckbox.checked) {
+        status.innerHTML = '⚠️ Playback failed. Retrying via Proxy (/proxy)...';
+        useProxyCheckbox.checked = true;
+        play(originalRawSource, true);
+        return;
+      }
+
+      // Attempt 2: Auto-switch to next available provider/source immediately without confirmation
+      if (currentSourcesList && currentSourcesList.length > 0) {
+        let nextIndex = currentSourceIndex + 1;
+        while (nextIndex < currentSourcesList.length && !isDirectMedia(typeof currentSourcesList[nextIndex] === 'string' ? currentSourcesList[nextIndex] : currentSourcesList[nextIndex].url)) {
+          nextIndex++;
+        }
+
+        if (nextIndex < currentSourcesList.length) {
+          const nextSource = currentSourcesList[nextIndex];
+          currentSourceIndex = nextIndex;
+          const qualLabel = (typeof nextSource === 'object' && nextSource.quality) ? nextSource.quality : ('Source #' + (nextIndex + 1));
+          const srcLabel = (typeof nextSource === 'object' && nextSource.source) ? ('[' + nextSource.source + '] ') : '';
+
+          status.innerHTML = '⚠️ Source failed. Auto-switching provider: <span class="text-blue-400 font-bold">' + srcLabel + qualLabel + '</span>...';
+
+          // Update active button styling
+          const buttons = document.querySelectorAll('#sources button');
+          buttons.forEach((b, idx) => {
+            if (idx === nextIndex) {
+              b.className = 'px-4 py-2 border rounded-lg text-sm transition border-blue-400 text-blue-400 bg-blue-400/10';
+            } else {
+              b.className = 'px-4 py-2 border rounded-lg text-sm transition border-white/10 bg-transparent text-slate-400 hover:border-blue-400 hover:text-slate-200';
+            }
+          });
+
+          if (autoSwitchTimeout) clearTimeout(autoSwitchTimeout);
+          autoSwitchTimeout = setTimeout(() => {
+            play(nextSource);
+          }, 400);
+          return;
+        }
+      }
+
+      // If all available providers/sources fail
+      status.innerHTML = '❌ All video providers and sources failed to play.';
+    }
+
     function play(sourceObj, forceProxy = false) {
       cleanPlayers();
+      resetStallWatchdog();
       const status = document.getElementById('status');
       originalRawSource = sourceObj;
 
       let url = typeof sourceObj === 'string' ? sourceObj : (sourceObj.url || '');
       let extraHeaders = typeof sourceObj === 'object' ? sourceObj.headers : null;
+
+      if (currentSourcesList.length > 0) {
+        const foundIdx = currentSourcesList.findIndex(s => (typeof s === 'string' ? s : s.url) === url);
+        if (foundIdx !== -1) currentSourceIndex = foundIdx;
+      }
 
       if (!isDirectMedia(url)) {
         status.innerHTML = '🔗 External Web Link: <a href="' + url + '" target="_blank" class="text-blue-400 underline">Open in New Tab ↗</a>';
@@ -147,11 +268,15 @@
               };
             });
           }
+          dashPlayer.on(dashjs.MediaPlayer.events.ERROR, (e) => {
+            console.warn('DASH playback error:', e);
+            handlePlaybackError();
+          });
           dashPlayer.initialize(video, finalUrl, true);
           status.textContent = (useProxy ? 'Proxy ' : '') + 'DASH • ' + url.split('/').pop().split('?')[0];
         } else {
           video.src = finalUrl;
-          video.play().catch(e => {});
+          video.play().catch(e => handlePlaybackError());
           status.textContent = (useProxy ? 'Proxy ' : '') + 'DASH (native)';
         }
       }
@@ -160,11 +285,17 @@
           hlsPlayer = new Hls();
           hlsPlayer.loadSource(finalUrl);
           hlsPlayer.attachMedia(video);
-          hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(e => {}));
+          hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(e => handlePlaybackError()));
+          hlsPlayer.on(Hls.Events.ERROR, (event, data) => {
+            if (data.fatal) {
+              console.warn('HLS fatal error:', data.type);
+              handlePlaybackError();
+            }
+          });
           status.textContent = (useProxy ? 'Proxy ' : '') + 'HLS • ' + url.split('/').pop().split('?')[0];
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
           video.src = finalUrl;
-          video.play().catch(e => {});
+          video.play().catch(e => handlePlaybackError());
           status.textContent = (useProxy ? 'Proxy ' : '') + 'HLS (native)';
         } else {
           status.textContent = 'HLS not supported in this browser';
@@ -172,27 +303,21 @@
       }
       else {
         video.src = finalUrl;
-        video.play().catch(e => {});
+        video.play().catch(e => handlePlaybackError());
         status.textContent = (useProxy ? 'Proxy ' : '') + 'MP4 • ' + url.split('/').pop().split('?')[0];
       }
     }
 
     video.onerror = () => {
-      const status = document.getElementById('status');
-      if (originalRawSource && !document.getElementById('use-proxy').checked) {
-        status.innerHTML = '⚠️ Playback failed. Retrying via Proxy (/proxy)...';
-        document.getElementById('use-proxy').checked = true;
-        play(originalRawSource, true);
-      } else if (originalRawSource) {
-        const rawUrl = typeof originalRawSource === 'string' ? originalRawSource : originalRawSource.url;
-        status.innerHTML = '⚠️ Media playback failed. <a href="' + rawUrl + '" target="_blank" class="text-blue-400 underline">Try opening directly ↗</a>';
-      }
+      handlePlaybackError();
     };
 
     function loadUrl() {
       const u = document.getElementById('url-input').value.trim();
       if (!u) return;
-      play({ quality: 'Auto', url: u });
+      currentSourcesList = [{ quality: 'Auto', url: u }];
+      currentSourceIndex = 0;
+      play(currentSourcesList[0]);
       document.querySelectorAll('.src-btn').forEach(b => b.classList.remove('active'));
     }
 
@@ -202,6 +327,8 @@
       try {
         const list = JSON.parse(raw);
         if (!Array.isArray(list)) throw new Error('not an array');
+        currentSourcesList = list;
+        currentSourceIndex = 0;
         renderSources(list);
         playBestSource(list);
       } catch (e) {
@@ -211,21 +338,24 @@
 
     function playBestSource(list) {
       if (!list || list.length === 0) return;
-      const direct = list.find(s => isDirectMedia(s.url));
-      if (direct) {
-        play(direct);
+      currentSourcesList = list;
+      const firstDirectIdx = list.findIndex(s => isDirectMedia(typeof s === 'string' ? s : s.url));
+      if (firstDirectIdx !== -1) {
+        currentSourceIndex = firstDirectIdx;
+        play(list[firstDirectIdx]);
       } else {
         document.getElementById('status').innerHTML = '⚠️ All available sources are external web links. Click a source button below to open it in a new tab.';
       }
     }
 
     function renderSources(list) {
+      currentSourcesList = list || [];
       const container = document.getElementById('sources');
       container.innerHTML = '';
-      const firstDirect = list.find(s => isDirectMedia(s.url));
+      const firstDirect = list.find(s => isDirectMedia(typeof s === 'string' ? s : s.url));
       list.forEach((s, i) => {
         const btn = document.createElement('button');
-        const isDirect = isDirectMedia(s.url);
+        const isDirect = isDirectMedia(typeof s === 'string' ? s : s.url);
         const isActive = firstDirect ? (s.url === firstDirect.url) : (i === 0);
         btn.className = 'px-4 py-2 border rounded-lg text-sm transition ' +
           (isActive
@@ -240,6 +370,7 @@
             b.className = 'px-4 py-2 border rounded-lg text-sm transition border-white/10 bg-transparent text-slate-400 hover:border-blue-400 hover:text-slate-200';
           });
           btn.className = 'px-4 py-2 border rounded-lg text-sm transition border-blue-400 text-blue-400 bg-blue-400/10';
+          currentSourceIndex = i;
           play(s);
         };
         container.appendChild(btn);
@@ -269,6 +400,7 @@
     }
 
     async function fetchAndPlay(endpoint) {
+      lastFetchEndpoint = endpoint;
       const status = document.getElementById('status');
       status.textContent = 'Fetching...';
       try {

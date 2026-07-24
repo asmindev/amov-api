@@ -23,9 +23,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.client = app.state.api_client  # backward compat alias
     app.state.cache = TTLCache()
     yield
-    await app.state.api_client.aclose()
-    await app.state.proxy_client.aclose()
-    logger.info("shut down — clients closed")
+    logger.info("shutting down — closing HTTP client connections...")
+    try:
+        await app.state.api_client.aclose()
+        await app.state.proxy_client.aclose()
+    except Exception as exc:
+        logger.warning("error closing HTTP clients during shutdown: %s", exc)
+    if hasattr(app.state, "cache") and hasattr(app.state.cache, "clear"):
+        try:
+            app.state.cache.clear()
+        except Exception:
+            pass
+    logger.info("application gracefully stopped — all resources released successfully")
 
 
 def create_app() -> FastAPI:

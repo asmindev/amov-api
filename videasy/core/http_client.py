@@ -34,10 +34,10 @@ def create_proxy_client() -> httpx.AsyncClient:
     """Client for proxy streaming (HLS, MP4, DASH segments).
 
     No read timeout — streams must run for as long as the video plays.
-    Higher connection limits since each viewer ties up one connection.
+    Connect timeout is 5s so dead/stalled CDNs fail fast.
     """
     return httpx.AsyncClient(
-        timeout=httpx.Timeout(connect=10.0, read=None, write=10.0, pool=10.0),
+        timeout=httpx.Timeout(connect=5.0, read=None, write=10.0, pool=10.0),
         headers=build_default_headers(),
         limits=httpx.Limits(
             max_connections=100,

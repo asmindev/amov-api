@@ -17,8 +17,12 @@ async def do_proxy_stream(
     request: Request,
     target_url: str,
     extra_headers_json: str = "",
+    imdb_id: str | None = None,
+    subject_id: str | None = None,
+    season: int | None = None,
+    episode: int | None = None,
 ) -> StreamingResponse:
-    """Core proxy logic shared by /proxy and DASH segment middleware."""
+    """Core proxy logic shared by /proxy and DASH segment middleware with auto-refresh for expired CDN tokens."""
     proxy_headers = get_domain_headers(target_url) or build_default_headers()
 
     u_lower = target_url.lower()
@@ -56,6 +60,37 @@ async def do_proxy_stream(
             resp = await client.send(req, stream=True, follow_redirects=True)
         except Exception as e:
             raise HTTPException(status_code=502, detail=f"Upstream error retry: {e}")
+
+    # Automatic Backend Token Refresh if CDN returns 403 or 401 due to expired t=
+    if resp.status_code in (403, 401) and (imdb_id or subject_id):
+        await resp.aclose()
+        logger.warning(
+            "CDN token expired (HTTP %s) for %s. Auto-refreshing via Moviebox API...",
+            resp.status_code,
+            target_url,
+        )
+        try:
+            from videasy.features.moviebox.service import fetch_sources
+            api_client = getattr(request.app.state, "api_client", client)
+            res = await fetch_sources(
+                api_client,
+                imdb_id=imdb_id,
+                subject_id=subject_id,
+                season=season,
+                episode=episode,
+                force_refresh=True,
+            )
+            sources = res.get("sources", [])
+            if sources:
+                fresh_url = sources[0]["url"]
+                logger.info("Successfully refreshed CDN URL: %s...", fresh_url[:80])
+                proxy_headers = get_domain_headers(fresh_url) or build_default_headers()
+                if range_header and not is_subtitle_or_text:
+                    proxy_headers["Range"] = range_header
+                req = client.build_request("GET", fresh_url, headers=proxy_headers)
+                resp = await client.send(req, stream=True, follow_redirects=True)
+        except Exception as refresh_err:
+            logger.error("Failed backend CDN token refresh: %s", refresh_err)
 
     if resp.status_code == 403:
         await resp.aclose()
