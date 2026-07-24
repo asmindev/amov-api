@@ -20,6 +20,7 @@ def create_api_client() -> httpx.AsyncClient:
     Has a read timeout to prevent zombie connections when upstreams stall.
     """
     return httpx.AsyncClient(
+        http2=True,
         timeout=httpx.Timeout(connect=10.0, read=30.0, write=10.0, pool=10.0),
         headers=build_default_headers(),
         limits=httpx.Limits(
@@ -33,10 +34,12 @@ def create_api_client() -> httpx.AsyncClient:
 def create_proxy_client() -> httpx.AsyncClient:
     """Client for proxy streaming (HLS, MP4, DASH segments).
 
+    Uses HTTP/2 for multiplexed CDN connections (matching browser behavior for Aliyun Tengine CDN).
     No read timeout — streams must run for as long as the video plays.
     Connect timeout is 5s so dead/stalled CDNs fail fast.
     """
     return httpx.AsyncClient(
+        http2=True,
         timeout=httpx.Timeout(connect=5.0, read=None, write=10.0, pool=10.0),
         headers=build_default_headers(),
         limits=httpx.Limits(

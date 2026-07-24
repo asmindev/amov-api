@@ -5,6 +5,7 @@ DOMAIN_HEADERS: dict[str, dict[str, str]] = {
     "hakunaymatata.com": {
         "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:152.0) Gecko/20100101 Firefox/152.0",
         "Accept": "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5",
+        "Accept-Encoding": "identity",
         "Origin": "https://themoviebox.xyz",
         "Referer": "https://themoviebox.xyz/",
         "Sec-Fetch-Dest": "video",
@@ -14,6 +15,7 @@ DOMAIN_HEADERS: dict[str, dict[str, str]] = {
     "aoneroom.com": {
         "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:152.0) Gecko/20100101 Firefox/152.0",
         "Accept": "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5",
+        "Accept-Encoding": "identity",
         "Origin": "https://themoviebox.xyz",
         "Referer": "https://themoviebox.xyz/",
         "Sec-Fetch-Dest": "video",
@@ -23,6 +25,7 @@ DOMAIN_HEADERS: dict[str, dict[str, str]] = {
     "themoviebox.xyz": {
         "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:152.0) Gecko/20100101 Firefox/152.0",
         "Accept": "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5",
+        "Accept-Encoding": "identity",
         "Origin": "https://themoviebox.xyz",
         "Referer": "https://themoviebox.xyz/",
         "Sec-Fetch-Dest": "video",
