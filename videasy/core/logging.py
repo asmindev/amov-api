@@ -26,6 +26,12 @@ class RequestFormatter(logging.Formatter):
         logging.ERROR: "\033[31m",
         logging.CRITICAL: "\033[1;31m",
     }
+    STATUS_COLORS = {
+        2: "\033[32m",  # green
+        3: "\033[36m",  # cyan
+        4: "\033[33m",  # yellow
+        5: "\033[31m",  # red
+    }
     RESET = "\033[0m"
 
     def __init__(self, use_colors: bool = True) -> None:
@@ -47,9 +53,15 @@ class RequestFormatter(logging.Formatter):
 
         if method and route:
             status_word = _status_word(status)
+            if self.use_colors and status:
+                code = int(status)
+                sc = self.STATUS_COLORS.get(code // 100, "")
+                status_str = f"{sc}{status}{self.RESET}"
+            else:
+                status_str = status
             return (
                 f"[{ts}] [{level_str}] "
-                f'"{method} {route} HTTP/1.1" {status} {status_word} {duration}ms'
+                f'"{method} {route} HTTP/1.1" {status_str} {status_word} {duration}ms'
             )
 
         # App log: [module/func.py:line] msg
