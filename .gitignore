@@ -15,6 +15,7 @@ build/
 
 # Temp / misc
 tmp/
+logs/
 .mimocode/
 
 # IDE

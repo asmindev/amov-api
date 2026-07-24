@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from videasy.core.cache import TTLCache
 from videasy.core.exceptions import register_exception_handlers
 from videasy.core.http_client import create_api_client, create_proxy_client
+from videasy.core.logging import RequestLoggingMiddleware, setup_logging
 
 logger = logging.getLogger("videasy")
 
@@ -28,6 +29,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 def create_app() -> FastAPI:
+    setup_logging()
+
     app = FastAPI(
         title="Videasy Decryptor API",
         description=(
@@ -59,6 +62,9 @@ def create_app() -> FastAPI:
 
     from videasy.proxy.middleware import DASHSegmentMiddleware
     app.add_middleware(DASHSegmentMiddleware)
+
+    # Request logging (outermost middleware — first to execute)
+    app.add_middleware(RequestLoggingMiddleware)
 
     # Exception handlers
     register_exception_handlers(app)
