@@ -63,7 +63,7 @@ class RequestFormatter(logging.Formatter):
             entry += f":{lineno}"
 
         msg = record.getMessage()
-        return f"[{ts}] [{level_str}] [{entry}] {msg}"
+        return f"[{ts}] [{level_str}] {entry} {msg}"
 
 
 class FileFormatter(logging.Formatter):
@@ -97,7 +97,7 @@ class FileFormatter(logging.Formatter):
                 entry += f":{lineno}"
 
             msg = record.getMessage()
-            line = f"[{ts}] [{level}] [{entry}] {msg}"
+            line = f"[{ts}] [{level}] {entry} {msg}"
 
         if record.exc_info and record.exc_info[0] is not None:
             line += "\n" + self.formatException(record.exc_info)
