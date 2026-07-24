@@ -27,9 +27,10 @@ class RequestFormatter(logging.Formatter):
         logging.CRITICAL: "\033[1;31m",
     }
     STATUS_COLORS = {
+        1: "\033[32m",  # green
         2: "\033[32m",  # green
-        3: "\033[36m",  # cyan
-        4: "\033[33m",  # yellow
+        3: "\033[32m",  # green
+        4: "\033[31m",  # red
         5: "\033[31m",  # red
     }
     RESET = "\033[0m"
@@ -59,9 +60,10 @@ class RequestFormatter(logging.Formatter):
                 status_str = f"{sc}{status}{self.RESET}"
             else:
                 status_str = status
+            route_str = f"\033[34m{route}\033[0m" if self.use_colors else route
             return (
                 f"[{ts}] [{level_str}] "
-                f'"{method} {route} HTTP/1.1" {status_str} {status_word} {duration}ms'
+                f'"{method} {route_str} HTTP/1.1" {status_str} {status_word} {duration}ms'
             )
 
         # App log: [module/func.py:line] msg
@@ -75,7 +77,8 @@ class RequestFormatter(logging.Formatter):
             entry += f":{lineno}"
 
         msg = record.getMessage()
-        return f"[{ts}] [{level_str}] {entry} {msg}"
+        entry_str = f"\033[32m{entry}\033[0m" if self.use_colors else entry
+        return f"[{ts}] [{level_str}] {entry_str} {msg}"
 
 
 class FileFormatter(logging.Formatter):
