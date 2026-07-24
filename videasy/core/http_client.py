@@ -39,7 +39,7 @@ def create_proxy_client() -> httpx.AsyncClient:
     Connect timeout is 5s so dead/stalled CDNs fail fast.
     """
     return httpx.AsyncClient(
-        http2=True,
+        http2=False,
         timeout=httpx.Timeout(connect=5.0, read=None, write=10.0, pool=10.0),
         headers=build_default_headers(),
         limits=httpx.Limits(
