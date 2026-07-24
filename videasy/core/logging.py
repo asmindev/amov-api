@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import sys
 import time
 from pathlib import Path
@@ -15,20 +14,17 @@ logger = logging.getLogger("videasy")
 
 
 class RequestFormatter(logging.Formatter):
-    """Custom formatter:
-    [timestamp] [LEVEL] [METHOD] [entry file:line] [route]
-
-    - METHOD is only shown for request-related logs (GET, POST, etc.)
-    - route is only shown for HTTP logs (e.g. /sources, /proxy)
-    - Non-request logs omit METHOD and route brackets
+    """Colored console formatter.
+    Request:  [ts] [LEVEL] "GET /path?q=1 HTTP/1.1" 200 23.0ms
+    App log:  [ts] [LEVEL] [module.py:42] message
     """
 
     LEVEL_COLORS = {
-        logging.DEBUG: "\033[36m",      # cyan
-        logging.INFO: "\033[32m",       # green
-        logging.WARNING: "\033[33m",    # yellow
-        logging.ERROR: "\033[31m",      # red
-        logging.CRITICAL: "\033[1;31m", # bold red
+        logging.DEBUG: "\033[36m",
+        logging.INFO: "\033[32m",
+        logging.WARNING: "\033[33m",
+        logging.ERROR: "\033[31m",
+        logging.CRITICAL: "\033[1;31m",
     }
     RESET = "\033[0m"
 
@@ -39,86 +35,98 @@ class RequestFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         ts = self.formatTime(record, "%Y-%m-%dT%H:%M:%S.%f")[:-3]
         level = record.levelname
-        module = getattr(record, "module", record.name)
-        func = getattr(record, "funcName", "")
-        lineno = getattr(record, "lineno", "")
         method = getattr(record, "http_method", "")
         route = getattr(record, "http_route", "")
         status = getattr(record, "http_status", "")
-        client = getattr(record, "client_host", "")
         duration = getattr(record, "duration_ms", "")
-
-        entry = f"{module}.py" if func else f"{module}.py"
-        if func:
-            entry = f"{module}/{func}.py"
-        if lineno:
-            entry += f":{lineno}"
-
-        if method and route:
-            request_block = f"[{method}] [{entry}] [{route}]"
-            if status:
-                request_block += f" [{status}]"
-            if duration:
-                request_block += f" [{duration}ms]"
-            if client:
-                request_block += f" [{client}]"
-        else:
-            request_block = f"[{entry}]"
-
-        msg = record.getMessage()
 
         if self.use_colors:
-            color = self.LEVEL_COLORS.get(record.levelno, "")
-            return f"[{ts}] [{color}{level}{self.RESET}] {request_block} {msg}"
+            level_str = f"{self.LEVEL_COLORS.get(record.levelno, '')}{level}{self.RESET}"
+        else:
+            level_str = level
 
-        return f"[{ts}] [{level}] {request_block} {msg}"
+        if method and route:
+            status_word = _status_word(status)
+            return (
+                f"[{ts}] [{level_str}] "
+                f'"{method} {route} HTTP/1.1" {status} {status_word} {duration}ms'
+            )
 
-
-class FileFormatter(logging.Formatter):
-    """Plain text formatter for file output (no ANSI colors).
-    [2024-01-15T10:30:45.123] [INFO] [GET] [sources/service.py:112] [GET /sources] [127.0.0.1] msg
-    """
-
-    def format(self, record: logging.LogRecord) -> str:
-        ts = self.formatTime(record, "%Y-%m-%dT%H:%M:%S.%f")[:-3]
-        level = record.levelname
+        # App log: [module/func.py:line] msg
         module = getattr(record, "module", record.name)
         func = getattr(record, "funcName", "")
         lineno = getattr(record, "lineno", "")
-        method = getattr(record, "http_method", "")
-        route = getattr(record, "http_route", "")
-        status = getattr(record, "http_status", "")
-        client = getattr(record, "client_host", "")
-        duration = getattr(record, "duration_ms", "")
-        exc = record.exc_info
-
         entry = f"{module}.py"
         if func:
             entry = f"{module}/{func}.py"
         if lineno:
             entry += f":{lineno}"
 
-        parts = [f"[{ts}] [{level}]"]
+        msg = record.getMessage()
+        return f"[{ts}] [{level_str}] [{entry}] {msg}"
+
+
+class FileFormatter(logging.Formatter):
+    """Plain text file formatter (no colors).
+    Request:  [ts] [LEVEL] "GET /path?q=1 HTTP/1.1" 200 OK 23.0ms
+    App log:  [ts] [LEVEL] [module.py:42] message
+    """
+
+    def format(self, record: logging.LogRecord) -> str:
+        ts = self.formatTime(record, "%Y-%m-%dT%H:%M:%S.%f")[:-3]
+        level = record.levelname
+        method = getattr(record, "http_method", "")
+        route = getattr(record, "http_route", "")
+        status = getattr(record, "http_status", "")
+        duration = getattr(record, "duration_ms", "")
 
         if method and route:
-            parts.append(f"[{method}]")
-        parts.append(f"[{entry}]")
-        if route:
-            parts.append(f"[{route}]")
-        if status:
-            parts.append(f"[{status}]")
-        if duration:
-            parts.append(f"[{duration}ms]")
-        if client:
-            parts.append(f"[{client}]")
+            status_word = _status_word(status)
+            line = (
+                f"[{ts}] [{level}] "
+                f'"{method} {route} HTTP/1.1" {status} {status_word} {duration}ms'
+            )
+        else:
+            module = getattr(record, "module", record.name)
+            func = getattr(record, "funcName", "")
+            lineno = getattr(record, "lineno", "")
+            entry = f"{module}.py"
+            if func:
+                entry = f"{module}/{func}.py"
+            if lineno:
+                entry += f":{lineno}"
 
-        parts.append(record.getMessage())
-        line = " ".join(parts)
+            msg = record.getMessage()
+            line = f"[{ts}] [{level}] [{entry}] {msg}"
 
-        if exc and exc[0] is not None:
-            line += "\n" + self.formatException(exc)
+        if record.exc_info and record.exc_info[0] is not None:
+            line += "\n" + self.formatException(record.exc_info)
 
         return line
+
+
+def _status_word(code: str) -> str:
+    words = {
+        "200": "OK",
+        "201": "Created",
+        "204": "No Content",
+        "301": "Moved Permanently",
+        "302": "Found",
+        "304": "Not Modified",
+        "400": "Bad Request",
+        "401": "Unauthorized",
+        "403": "Forbidden",
+        "404": "Not Found",
+        "405": "Method Not Allowed",
+        "408": "Request Timeout",
+        "429": "Too Many Requests",
+        "499": "Client Closed",
+        "500": "Internal Server Error",
+        "502": "Bad Gateway",
+        "503": "Service Unavailable",
+        "504": "Gateway Timeout",
+    }
+    return words.get(code, "")
 
 
 def setup_logging(log_dir: str = "logs", level: int = logging.DEBUG) -> None:
@@ -155,8 +163,8 @@ def setup_logging(log_dir: str = "logs", level: int = logging.DEBUG) -> None:
 
 
 class RequestLoggingMiddleware:
-    """ASGI middleware that logs every HTTP request with:
-    method, route, status code, duration, client IP."""
+    """ASGI middleware that logs every HTTP request:
+    "METHOD /path?query HTTP/1.1" STATUS DURATIONms"""
 
     SKIP_PATHS = frozenset({"/health", "/favicon.ico"})
 
@@ -169,12 +177,16 @@ class RequestLoggingMiddleware:
 
         path: str = scope.get("path", "")
         method: str = scope.get("method", "?")
+        query_string: bytes = scope.get("query_string", b"")
         client = scope.get("client")
         client_host = client[0] if client else "?"
 
-        # Skip noisy health checks
         if path in self.SKIP_PATHS:
             return await self.app(scope, receive, send)
+
+        full_route = path
+        if query_string:
+            full_route += "?" + query_string.decode("utf-8", errors="replace")
 
         start = time.perf_counter()
         status_code = 0
@@ -204,7 +216,7 @@ class RequestLoggingMiddleware:
             else:
                 level = logging.INFO
 
-            log_record = logging.LogRecord(
+            rec = logging.LogRecord(
                 name="videasy",
                 level=level,
                 pathname="",
@@ -213,14 +225,12 @@ class RequestLoggingMiddleware:
                 args=(),
                 exc_info=None,
             )
-            # Inject extra fields for the formatter
-            log_record.module = "request"
-            log_record.funcName = ""
-            log_record.http_method = method
-            log_record.http_route = path
-            log_record.http_status = str(status_code)
-            log_record.duration_ms = str(elapsed)
-            log_record.client_host = client_host
+            rec.module = "request"
+            rec.funcName = ""
+            rec.http_method = method
+            rec.http_route = full_route
+            rec.http_status = str(status_code)
+            rec.duration_ms = str(elapsed)
+            rec.client_host = client_host
 
-            effective_level = logging.INFO if status_code < 400 else logging.WARNING
-            logger.handle(log_record)
+            logger.handle(rec)
