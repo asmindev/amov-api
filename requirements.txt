@@ -38,7 +38,6 @@ typing-extensions==4.16.0
 typing-inspection==0.4.2
 uvicorn==0.51.0
 uvloop==0.22.1
--e file:///home/labubu/Projects/Videasy.net-Decryptor
 wasmtime==47.0.1
 watchfiles==1.2.0
 websockets==16.1.1
