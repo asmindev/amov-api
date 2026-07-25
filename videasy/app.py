@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
@@ -14,6 +15,8 @@ from videasy.core.logging import RequestLoggingMiddleware, setup_logging
 
 logger = logging.getLogger("videasy")
 
+_SHUTDOWN_TIMEOUT = 5
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -23,18 +26,32 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.client = app.state.api_client  # backward compat alias
     app.state.cache = TTLCache()
     yield
-    logger.info("shutting down — closing HTTP client connections...")
+    logger.info("shutting down — closing HTTP client connections (timeout %ss)...", _SHUTDOWN_TIMEOUT)
     try:
-        await app.state.api_client.aclose()
-        await app.state.proxy_client.aclose()
+        await asyncio.wait_for(
+            _close_clients(app),
+            timeout=_SHUTDOWN_TIMEOUT,
+        )
+    except asyncio.TimeoutError:
+        logger.warning("shutdown timed out after %ss — forcing stop", _SHUTDOWN_TIMEOUT)
     except Exception as exc:
-        logger.warning("error closing HTTP clients during shutdown: %s", exc)
+        logger.warning("error during shutdown: %s", exc)
     if hasattr(app.state, "cache") and hasattr(app.state.cache, "clear"):
         try:
             app.state.cache.clear()
         except Exception:
             pass
     logger.info("application gracefully stopped — all resources released successfully")
+
+
+async def _close_clients(app: FastAPI) -> None:
+    for attr in ("api_client", "proxy_client"):
+        client = getattr(app.state, attr, None)
+        if client is not None:
+            try:
+                await client.aclose()
+            except Exception:
+                pass
 
 
 def create_app() -> FastAPI:

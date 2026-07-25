@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 
@@ -103,10 +104,15 @@ async def do_proxy_stream(
         try:
             async for chunk in resp.aiter_bytes(chunk_size=64 * 1024):
                 yield chunk
+        except asyncio.CancelledError:
+            logger.debug("Proxy stream cancelled during shutdown for %s", target_url)
         except (httpx.TimeoutException, httpx.RequestError, Exception) as e:
             logger.debug("Proxy stream ended for %s: %s", target_url, e)
         finally:
-            await resp.aclose()
+            try:
+                await resp.aclose()
+            except Exception:
+                pass
 
     content_type = resp.headers.get("content-type", "application/octet-stream")
     res_headers: dict[str, str] = {
