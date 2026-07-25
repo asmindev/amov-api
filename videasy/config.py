@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     )
     request_timeout: int = 30
     cache_ttl_offset: int = 5_000
-    opensubtitles_api_key: str = "bOPLedTRgxt5u4jRtkXIbxMf36OSbvEH"
+    wyzie_api_key: str = ""
 
     # Moviebox / Aoneroom API
     moviebox_api_base: str = "https://h5-api.aoneroom.com"

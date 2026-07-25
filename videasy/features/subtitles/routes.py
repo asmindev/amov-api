@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Path, Query, Request
 
 from videasy.features.sources.providers import AVAILABLE, PROVIDER_MAP
 from videasy.features.sources.service import fetch_sources
-from videasy.integrations.opensubtitles import fetch_opensubtitles
+from videasy.integrations.wyzie import fetch_wyzie, fetch_wyzie_grouped
 from videasy.models.source import DecryptedData, SourceParams
 
 router = APIRouter(tags=["Subtitles"])
@@ -19,18 +19,18 @@ router = APIRouter(tags=["Subtitles"])
 )
 async def list_subtitle_sources() -> dict[str, list[str]]:
     providers = [p.name.lower() for p in AVAILABLE]
-    providers.append("opensubtitles")
+    providers.append("wyzie")
     return {"sources": providers}
 
 
 @router.get(
     "/subtitles/{provider_name}",
     summary="Fetch subtitles from a specific provider",
-    description="Fetch subtitles from video providers or OpenSubtitles.",
+    description="Fetch subtitles from video providers or Wyzie.",
 )
 async def get_provider_subtitles(
     request: Request,
-    provider_name: str = Path(..., description="Provider name (e.g. yoru, neon, opensubtitles)"),
+    provider_name: str = Path(..., description="Provider name (e.g. yoru, neon, wyzie)"),
     title: str = Query(default="", description="Media title (e.g. Interstellar)"),
     mediaType: str = Query(default="movie", pattern=r"^(movie|tv)$", description="Media type"),
     tmdbId: str = Query(default="", pattern=r"^\d*$", description="TMDB numerical ID"),
@@ -41,15 +41,23 @@ async def get_provider_subtitles(
 ) -> dict[str, Any]:
     provider_lower = provider_name.lower()
 
-    if provider_lower == "opensubtitles":
-        if not imdbId:
-            raise HTTPException(status_code=400, detail="imdbId is required for OpenSubtitles")
-        subs = await fetch_opensubtitles(request.app.state.api_client, imdbId)
-        return {"subtitles": [sub.model_dump() for sub in subs]}
+    if provider_lower == "wyzie":
+        if not tmdbId and not imdbId:
+            raise HTTPException(status_code=400, detail="tmdbId or imdbId is required for Wyzie")
+        season_num = int(seasonId) if seasonId else None
+        episode_num = int(episodeId) if episodeId else None
+        groups = await fetch_wyzie_grouped(
+            request.app.state.api_client,
+            tmdb_id=tmdbId,
+            imdb_id=imdbId,
+            season=season_num if mediaType == "tv" else None,
+            episode=episode_num if mediaType == "tv" else None,
+        )
+        return {"subtitles": [g.model_dump() for g in groups]}
 
     prov = PROVIDER_MAP.get(provider_lower)
     if not prov:
-        available = ", ".join([p.name.lower() for p in AVAILABLE] + ["opensubtitles"])
+        available = ", ".join([p.name.lower() for p in AVAILABLE] + ["wyzie"])
         raise HTTPException(status_code=400, detail=f"Unknown subtitle provider '{provider_name}'. Available: {available}")
 
     if not title or not tmdbId:
@@ -72,14 +80,26 @@ async def get_provider_subtitles(
 
 
 @router.get(
-    "/opensubtitles",
-    summary="Fetch OpenSubtitles manually",
-    description="Fetch subtitles from OpenSubtitles using an IMDB ID.",
+    "/wyzie",
+    summary="Fetch Wyzie subtitles",
+    description="Fetch subtitles from Wyzie Subs grouped by language.",
 )
-async def get_opensubtitles(
+async def get_wyzie(
     request: Request,
-    imdbId: str = Query(..., description="IMDB ID (e.g. tt1234567)"),
+    tmdbId: str = Query(default="", description="TMDB numerical ID"),
+    imdbId: str = Query(default="", description="IMDB ID (e.g. tt1234567)"),
+    language: str = Query(default="", description="Language filter (ISO 639-1, comma-separated)"),
+    season: int | None = Query(default=None, description="Season number (for TV)"),
+    episode: int | None = Query(default=None, description="Episode number (for TV)"),
 ) -> list[dict[str, Any]]:
-    from videasy.models.subtitle import SubtitleItem
-    subs = await fetch_opensubtitles(request.app.state.api_client, imdbId)
-    return [sub.model_dump() for sub in subs]
+    if not tmdbId and not imdbId:
+        raise HTTPException(status_code=400, detail="tmdbId or imdbId is required")
+    groups = await fetch_wyzie_grouped(
+        request.app.state.api_client,
+        tmdb_id=tmdbId,
+        imdb_id=imdbId,
+        language=language,
+        season=season,
+        episode=episode,
+    )
+    return [g.model_dump() for g in groups]

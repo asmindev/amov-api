@@ -30,4 +30,4 @@ async def test_subtitles_list(client):
     assert r.status_code == 200
     data = r.json()
     assert "sources" in data
-    assert "opensubtitles" in data["sources"]
+    assert "wyzie" in data["sources"]
