@@ -41,6 +41,8 @@ async def fetch_wyzie(
 
     try:
         resp = await client.get(f"{WYZIE_BASE}/search", params=params)
+        if resp.status_code == 400:
+            return []
         resp.raise_for_status()
         data = resp.json()
 
@@ -92,6 +94,8 @@ async def fetch_wyzie_grouped(
 
     try:
         resp = await client.get(f"{WYZIE_BASE}/search", params=params)
+        if resp.status_code == 400:
+            return []
         resp.raise_for_status()
         data = resp.json()
 
