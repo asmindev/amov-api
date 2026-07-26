@@ -61,6 +61,7 @@ All settings can be overridden via environment variables with the `VIDEASY_` pre
 | `VIDEASY_REFERER` | `https://player.videasy.to/` | Default Referer header |
 | `VIDEASY_REQUEST_TIMEOUT` | `30` | Global request timeout (seconds) |
 | `VIDEASY_MOVIEBOX_API_BASE` | `https://h5-api.aoneroom.com` | Moviebox BFF API base |
+| `VIDEASY_MOVIEBOX_SITE_BASE` | `https://themoviebox.xyz` | Moviebox site base used for referer/origin and URLs |
 | `VIDEASY_MOVIEBOX_PLAY_BASE` | `https://themoviebox.xyz` | Moviebox play endpoint base |
 
 ---

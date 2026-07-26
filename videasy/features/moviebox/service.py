@@ -16,8 +16,10 @@ logger = logging.getLogger("moviebox")
 API_BASE = settings.moviebox_api_base
 DETAIL_ENDPOINT = settings.moviebox_detail_endpoint
 SEARCH_ENDPOINT = settings.moviebox_search_endpoint
-PLAY_BASE = settings.moviebox_play_base
+SITE_BASE = settings.moviebox_site_base.rstrip("/")
+PLAY_BASE = SITE_BASE
 PLAY_ENDPOINT = settings.moviebox_play_endpoint
+CINEMETA_BASE = settings.cinemeta_base.rstrip("/")
 
 # In-memory guest JWT token cache (token, expires_at)
 _guest_token: list[str] = [""]  # mutable container so it's writable from async funcs
@@ -125,12 +127,12 @@ def parse_moviebox_input(url_or_id: str) -> MovieboxInput:
 
 
 def _build_headers(referer: str | None = None) -> dict[str, str]:
-    ref = referer or "https://themoviebox.xyz/"
+    ref = referer or f"{SITE_BASE}/"
     return {
         "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:152.0) Gecko/20100101 Firefox/152.0",
         "Accept": "application/json",
         "Accept-Language": "en-US,en;q=0.9",
-        "Origin": "https://themoviebox.xyz",
+        "Origin": SITE_BASE,
         "Referer": ref,
         "Sec-Fetch-Dest": "empty",
         "Sec-Fetch-Mode": "cors",
@@ -290,8 +292,8 @@ async def fetch_play_streams(
     logger.info("fetching moviebox play: subjectId=%s se=%s ep=%s", subject_id, se, ep)
 
     full_referer = (
-        f"https://themoviebox.xyz/movies/{detail_path}?id={subject_id}&type=/movie/detail&detailSe={se}&detailEp={ep}&lang={lang}"
-        if detail_path else "https://themoviebox.xyz/"
+        f"{SITE_BASE}/movies/{detail_path}?id={subject_id}&type=/movie/detail&detailSe={se}&detailEp={ep}&lang={lang}"
+        if detail_path else f"{SITE_BASE}/"
     )
     headers = _build_headers(referer=full_referer)
     cookie_str = cookie.strip()
@@ -628,7 +630,7 @@ async def resolve_moviebox_imdb_id(
     media_type = "series" if is_tv else "movie"
 
     try:
-        url = f"https://v3-cinemeta.strem.io/catalog/{media_type}/top/search={quote(clean_title)}.json"
+        url = f"{CINEMETA_BASE}/catalog/{media_type}/top/search={quote(clean_title)}.json"
         resp = await client.get(url, timeout=5.0)
         if resp.status_code == 200:
             metas = resp.json().get("metas", [])
@@ -645,18 +647,80 @@ async def resolve_moviebox_imdb_id(
     return ""
 
 
+async def _fetch_tmdb_original_title(client: httpx.AsyncClient, moviedb_id: int) -> str:
+    """Fetch the original (non-English) title from a TMDB movie page."""
+    try:
+        resp = await client.get(
+            f"https://www.themoviedb.org/movie/{moviedb_id}",
+            headers={
+                "Accept": "text/html",
+                "Accept-Language": "en-US,en;q=0.9",
+            },
+            follow_redirects=True,
+            timeout=8.0,
+        )
+        if resp.status_code == 200:
+            m = re.search(r"Original Title</strong>\s*(.*?)</p>", resp.text, re.DOTALL)
+            if m:
+                title = re.sub(r"<[^>]+>", "", m.group(1)).strip()
+                if title:
+                    return title
+    except Exception as exc:
+        logger.debug("TMDB original title fetch failed for %s: %s", moviedb_id, exc)
+    return ""
+
+
 async def resolve_imdb_to_moviebox(
     client: httpx.AsyncClient,
     imdb_id: str,
+    original_title: str = "",
+    media_type: str = "movie",
+    year: str = "",
 ) -> tuple[str, str]:
-    """Resolve an IMDB ID (e.g. tt9018736) to Moviebox (subject_id, detail_path)."""
+    """Resolve an IMDB ID (e.g. tt9018736) to Moviebox (subject_id, detail_path).
+
+    When ``original_title`` is provided the Cinemeta metadata lookup is skipped
+    entirely — the title is searched directly on Moviebox which is both faster
+    and more accurate for localised titles.
+    """
     if not imdb_id.startswith("tt"):
         return "", ""
 
+    subject_type = 2 if media_type == "tv" else 1
+
     try:
+        # --- Fast path: use the caller-supplied original title directly ---
+        if original_title:
+            title = original_title
+            results = await search_titles(client, title)
+            clean_title = re.sub(r"[^\w\s]", "", title, flags=re.UNICODE).lower().strip()
+
+            # Exact or substring year + title match
+            for res in results:
+                if res.get("subjectType") != subject_type:
+                    continue
+                res_title = re.sub(r"[^\w\s]", "", res.get("title", ""), flags=re.UNICODE).lower().strip()
+                res_year = str(res.get("year", ""))
+                if clean_title in res_title or res_title in clean_title:
+                    if not year or res_year == year:
+                        return str(res.get("subjectId", "")), str(res.get("detailPath", ""))
+
+            # Year-only fallback: first result matching exact year
+            if year:
+                for res in results:
+                    if res.get("subjectType") != subject_type:
+                        continue
+                    if str(res.get("year", "")) == year:
+                        logger.info(
+                            "IMDB %s matched by year-only: %s -> %s (%s)",
+                            imdb_id, title, res.get("title"), res.get("subjectId"),
+                        )
+                        return str(res.get("subjectId", "")), str(res.get("detailPath", ""))
+
+        # --- Slow path: fetch metadata from Cinemeta, then search ---
         meta = {}
         r = await client.get(
-            f"https://v3-cinemeta.strem.io/meta/series/{imdb_id}.json",
+            f"{CINEMETA_BASE}/meta/series/{imdb_id}.json",
             follow_redirects=True,
             timeout=5.0,
         )
@@ -665,7 +729,7 @@ async def resolve_imdb_to_moviebox(
 
         if not meta:
             r = await client.get(
-                f"https://v3-cinemeta.strem.io/meta/movie/{imdb_id}.json",
+                f"{CINEMETA_BASE}/meta/movie/{imdb_id}.json",
                 follow_redirects=True,
                 timeout=5.0,
             )
@@ -694,7 +758,7 @@ async def resolve_imdb_to_moviebox(
                 res_title = re.sub(r"[^\w\s]", "", res.get("title", ""), flags=re.UNICODE).lower().strip()
                 res_year = str(res.get("year", ""))
                 if clean_req_title in res_title or res_title in clean_req_title:
-                    if not year or res_year == year or abs(int(res_year or 0) - int(year or 0)) <= 1:
+                    if not year or res_year == year:
                         return str(res.get("subjectId", "")), str(res.get("detailPath", ""))
 
         # 2. Second priority: subjectType match and title prefix match
@@ -703,6 +767,35 @@ async def resolve_imdb_to_moviebox(
                 res_title = re.sub(r"[^\w\s]", "", res.get("title", ""), flags=re.UNICODE).lower().strip()
                 if clean_req_title in res_title or res_title in clean_req_title:
                     return str(res.get("subjectId", "")), str(res.get("detailPath", ""))
+
+        # 3. Fallback: try TMDB original title
+        moviedb_id = meta.get("moviedb_id") or meta.get("external_ids", {}).get("tmdb_id")
+        if moviedb_id:
+            orig_title = await _fetch_tmdb_original_title(client, int(moviedb_id))
+            if orig_title and orig_title.lower() != title.lower():
+                logger.info("Trying TMDB original title %r for %s", orig_title, imdb_id)
+                orig_results = await search_titles(client, orig_title)
+                clean_orig = re.sub(r"[^\w\s]", "", orig_title, flags=re.UNICODE).lower().strip()
+
+                year_candidates: list[dict] = []
+                for res in orig_results:
+                    if res.get("subjectType") != subject_type:
+                        continue
+                    res_title = re.sub(r"[^\w\s]", "", res.get("title", ""), flags=re.UNICODE).lower().strip()
+                    res_year = str(res.get("year", ""))
+                    exact_year_match = year and res_year == year
+                    if not exact_year_match:
+                        continue
+                    if clean_orig in res_title or res_title in clean_orig:
+                        logger.info("Matched via TMDB original title (substring): %s -> %s", orig_title, res.get("subjectId"))
+                        return str(res.get("subjectId", "")), str(res.get("detailPath", ""))
+                    year_candidates.append(res)
+
+                if year_candidates:
+                    res = year_candidates[0]
+                    logger.info("Matched via TMDB original title (year-only): %s -> %s (%s)", orig_title, res.get("title"), res.get("subjectId"))
+                    return str(res.get("subjectId", "")), str(res.get("detailPath", ""))
+
     except Exception as exc:
         logger.warning("moviebox reverse lookup failed: %s", exc)
 
@@ -717,26 +810,39 @@ async def fetch_sources(
     lang: str = "en",
     try_play: bool = True,
     cookie: str = "",
+    original_title: str = "",
+    media_type: str = "movie",
+    year: str = "",
 ) -> dict[str, Any]:
     """
     Fetch video sources for a TheMovieBox title.
 
     Args:
-        url_or_id: Numeric subjectId, IMDB ID (tt...), full themoviebox.xyz URL, or slug.
-        se:        Season number (for TV shows, 0 for movies).
-        ep:        Episode number (for TV shows, 0 for movies).
-        lang:      Preferred subtitle language code.
-        try_play:  Whether to attempt the authenticated play endpoint.
-        cookie:    Optional user cookie string (e.g. mb_token=...; token=...)
+        url_or_id:      Numeric subjectId, IMDB ID (tt...), full themoviebox.xyz URL, or slug.
+        se:             Season number (for TV shows, 0 for movies).
+        ep:             Episode number (for TV shows, 0 for movies).
+        lang:           Preferred subtitle language code.
+        try_play:       Whether to attempt the authenticated play endpoint.
+        cookie:         Optional user cookie string (e.g. mb_token=...; token=...)
+        original_title: Original/localized title (required when url_or_id is an IMDB ID).
+        media_type:     "movie" or "tv".
+        year:           Release year (e.g. "2024").
 
     Returns a dict with metadata and ``sources`` / ``subtitles`` lists.
     """
     orig_input = url_or_id
     # Reverse lookup if url_or_id is an IMDB ID (starts with tt)
     if url_or_id.strip().startswith("tt"):
-        sub_id, det_path = await resolve_imdb_to_moviebox(client, url_or_id.strip())
+        sub_id, det_path = await resolve_imdb_to_moviebox(
+            client, url_or_id.strip(),
+            original_title=original_title,
+            media_type=media_type,
+            year=year,
+        )
         if sub_id:
             url_or_id = sub_id
+        else:
+            raise ValueError(f"Could not resolve IMDB ID {url_or_id.strip()} to a Moviebox subject")
 
     parsed = parse_moviebox_input(url_or_id)
 
@@ -880,7 +986,7 @@ def _format_search_results(items: list[dict]) -> list[dict[str, Any]]:
         detail_path = item.get("detailPath", "")
         media_segment = "movies" if subject_type == 1 else "tv"
         moviebox_url = (
-            f"https://themoviebox.xyz/{media_segment}/{detail_path}?id={subject_id}"
+            f"{SITE_BASE}/{media_segment}/{detail_path}?id={subject_id}"
             if subject_id and detail_path else ""
         )
         results.append({

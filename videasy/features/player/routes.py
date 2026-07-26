@@ -6,6 +6,8 @@ from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse
 from jinja2 import Environment, FileSystemLoader
 
+from videasy.config import settings
+
 router = APIRouter(include_in_schema=False)
 
 _template_dir = os.path.join(os.path.dirname(__file__), "templates")
@@ -33,4 +35,7 @@ async def landing_page(request: Request) -> str:
         for i, p in enumerate(AVAILABLE)
     )
 
-    return template.render(provider_badges=provider_badges)
+    return template.render(
+        provider_badges=provider_badges,
+        moviebox_site_base=settings.moviebox_site_base.rstrip("/"),
+    )

@@ -72,7 +72,7 @@ async def resolve_title_if_missing(
     if params.imdbId and params.imdbId.startswith("tt"):
         try:
             kind = "series" if params.mediaType == "tv" else "movie"
-            url = f"https://v3-cinemeta.strem.io/meta/{kind}/{params.imdbId}.json"
+            url = f"{settings.cinemeta_base}/meta/{kind}/{params.imdbId}.json"
             r = await client.get(url, timeout=4.0)
             if r.status_code == 200:
                 name = r.json().get("meta", {}).get("name")

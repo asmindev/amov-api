@@ -26,6 +26,9 @@ async def moviebox_sources(
     request: Request,
     subjectId: str = Query(default="", min_length=0, description="Moviebox subject ID (numeric)"),
     imdbId: str = Query(default="", pattern=r"^tt\d+$|^$", description="IMDB ID (e.g. tt9018736)"),
+    originalTitle: str = Query(default="", min_length=0, description="Original title (required when using imdbId)"),
+    mediaType: str = Query(default="movie", pattern=r"^(movie|tv)$", description="Media type: movie or tv"),
+    year: str = Query(default="", pattern=r"^\d{4}$|^$", description="Release year (e.g. 2024)"),
     url: str = Query(default="", min_length=0, description="Full themoviebox.xyz URL"),
     seasonId: str = Query(default="0", pattern=r"^\d+$", description="Season number (TV only, default: 0)"),
     episodeId: str = Query(default="0", pattern=r"^\d+$", description="Episode number (TV only, default: 0)"),
@@ -35,6 +38,8 @@ async def moviebox_sources(
 
     if not subjectId and not url and not imdbId:
         raise HTTPException(status_code=400, detail="Provide subjectId, imdbId, or url")
+    if imdbId and not originalTitle.strip():
+        raise HTTPException(status_code=400, detail="originalTitle is required when using imdbId")
     input_str = subjectId or imdbId or url
     if not input_str.strip():
         raise HTTPException(status_code=400, detail="Empty input")
@@ -42,6 +47,9 @@ async def moviebox_sources(
         data = await mb_fetch(
             request.app.state.api_client, input_str,
             se=int(seasonId), ep=int(episodeId), cookie=cookie,
+            original_title=originalTitle.strip(),
+            media_type=mediaType,
+            year=year.strip(),
         )
         subject_type = data.get("subjectType", 1)
         media_type = "tv" if subject_type == 2 else "movie"

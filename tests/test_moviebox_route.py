@@ -56,7 +56,7 @@ async def test_moviebox_sources_route_by_imdb_id(client):
             "subtitles": [],
         }
 
-        r = await client.get("/moviebox/sources?imdbId=tt9018736&seasonId=1&episodeId=1")
+        r = await client.get("/moviebox/sources?imdbId=tt9018736&originalTitle=Avatar%3A+The+Last+Airbender&mediaType=tv&year=2024&seasonId=1&episodeId=1")
         assert r.status_code == 200
         data = r.json()
         assert data["meta"]["imdbId"] == "tt9018736"

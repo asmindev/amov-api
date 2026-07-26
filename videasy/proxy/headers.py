@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+from videasy.config import settings
+
+MOVIEBOX_SITE_BASE = settings.moviebox_site_base.rstrip("/")
+
 # Domain-specific headers for known CDN providers
 DOMAIN_HEADERS: dict[str, dict[str, str]] = {
     "hakunaymatata.com": {
         "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:152.0) Gecko/20100101 Firefox/152.0",
         "Accept": "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5",
         "Accept-Encoding": "identity",
-        "Origin": "https://themoviebox.xyz",
-        "Referer": "https://themoviebox.xyz/",
+        "Origin": MOVIEBOX_SITE_BASE,
+        "Referer": f"{MOVIEBOX_SITE_BASE}/",
         "Sec-Fetch-Dest": "video",
         "Sec-Fetch-Mode": "cors",
         "Sec-Fetch-Site": "cross-site",
@@ -16,8 +20,8 @@ DOMAIN_HEADERS: dict[str, dict[str, str]] = {
         "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:152.0) Gecko/20100101 Firefox/152.0",
         "Accept": "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5",
         "Accept-Encoding": "identity",
-        "Origin": "https://themoviebox.xyz",
-        "Referer": "https://themoviebox.xyz/",
+        "Origin": MOVIEBOX_SITE_BASE,
+        "Referer": f"{MOVIEBOX_SITE_BASE}/",
         "Sec-Fetch-Dest": "video",
         "Sec-Fetch-Mode": "cors",
         "Sec-Fetch-Site": "cross-site",
@@ -26,8 +30,8 @@ DOMAIN_HEADERS: dict[str, dict[str, str]] = {
         "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:152.0) Gecko/20100101 Firefox/152.0",
         "Accept": "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5",
         "Accept-Encoding": "identity",
-        "Origin": "https://themoviebox.xyz",
-        "Referer": "https://themoviebox.xyz/",
+        "Origin": MOVIEBOX_SITE_BASE,
+        "Referer": f"{MOVIEBOX_SITE_BASE}/",
         "Sec-Fetch-Dest": "video",
         "Sec-Fetch-Mode": "cors",
         "Sec-Fetch-Site": "cross-site",
