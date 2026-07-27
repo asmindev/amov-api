@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import re
-from urllib.parse import quote
 
 import httpx
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -99,22 +98,19 @@ async def proxy_hls(
             },
         )
 
-    # ── HLS M3U8: rewrite segment/variant URLs to /proxy?url=... ──
+    # ── HLS M3U8: rewrite relative segment/variant URLs to absolute ──
     is_m3u8 = ".m3u8" in u_lower or "application/vnd.apple.mpegurl" in resp.headers.get("content-type", "")
     if is_m3u8:
         raw = (await resp.aread()).decode("utf-8", errors="ignore")
         await resp.aclose()
 
         base_url = url.rsplit("/", 1)[0] + "/"
-        extra = ("&headers=" + quote(headers.strip(), safe="")) if headers.strip() else ""
 
         rewritten_lines = []
         for line in raw.splitlines(keepends=True):
             stripped = line.strip()
-            if stripped and not stripped.startswith("#"):
-                abs_url = stripped if stripped.startswith(("http://", "https://")) else base_url + stripped.lstrip("/")
-                proxy_url = "/proxy?url=" + quote(abs_url, safe="") + extra
-                line = line.replace(stripped, proxy_url)
+            if stripped and not stripped.startswith("#") and not stripped.startswith(("http://", "https://")):
+                line = line.replace(stripped, base_url + stripped.lstrip("/"))
             rewritten_lines.append(line)
 
         async def m3u8_gen():
