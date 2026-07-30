@@ -21,7 +21,7 @@ class WyzieSubtitle(BaseModel):
     release: str = ""
     releases: list[str] = Field(default_factory=list)
     fileName: str = ""
-    downloadCount: int = 0
+    downloadCount: int | None = None
     origin: str | None = ""
     ai: bool = False
 

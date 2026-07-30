@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    api_base: str = "https://api.wingsdatabase.com"
+    api_base: str = "https://api.speedracelight.com"
     origin: str = "https://player.videasy.to"
     referer: str = "https://player.videasy.to/"
     dec_api: str = "https://enc-dec.app/api/dec-videasy"

@@ -55,7 +55,7 @@ All settings can be overridden via environment variables with the `VIDEASY_` pre
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `VIDEASY_API_BASE` | `https://api.wingsdatabase.com` | Wingsdatabase API base URL |
+| `VIDEASY_API_BASE` | `https://api.speedracelight.com` | Speedracelight API base URL |
 | `VIDEASY_DEC_API` | `https://enc-dec.app/api/dec-videasy` | Decryption endpoint |
 | `VIDEASY_ORIGIN` | `https://player.videasy.to` | Default Origin header |
 | `VIDEASY_REFERER` | `https://player.videasy.to/` | Default Referer header |

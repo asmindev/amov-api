@@ -16,12 +16,10 @@ def build_default_headers() -> dict[str, str]:
 
 def create_api_client() -> httpx.AsyncClient:
     """Client for API calls (sources, moviebox, subtitles, decryption).
-
-    Has an 8s read timeout so dead/hanging upstream providers fail fast.
     """
     return httpx.AsyncClient(
         http2=True,
-        timeout=httpx.Timeout(connect=6.0, read=8.0, write=6.0, pool=6.0),
+        timeout=httpx.Timeout(connect=6.0, read=settings.request_timeout, write=6.0, pool=6.0),
         headers=build_default_headers(),
         limits=httpx.Limits(
             max_connections=20,
