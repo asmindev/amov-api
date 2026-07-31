@@ -107,6 +107,10 @@ async def do_proxy_stream(
     IDLE_CHUNK_TIMEOUT = 60.0
 
     async def stream_generator():
+        # Create the byte iterator ONCE — calling aiter_bytes() per iteration
+        # raises httpx "content has already been streamed" after the first chunk
+        # and truncates the response, which made every proxied segment fail.
+        iterator = resp.aiter_bytes(chunk_size=64 * 1024)
         try:
             # Per-chunk idle timeout: a stalled CDN or a client that stopped
             # reading (paused / disconnected) will time out instead of leaving
@@ -115,7 +119,7 @@ async def do_proxy_stream(
             while True:
                 try:
                     chunk = await asyncio.wait_for(
-                        resp.aiter_bytes(chunk_size=64 * 1024).__anext__(),
+                        iterator.__anext__(),
                         timeout=IDLE_CHUNK_TIMEOUT,
                     )
                 except StopAsyncIteration:
