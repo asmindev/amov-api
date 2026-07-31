@@ -415,24 +415,35 @@ def extract_sources(detail: dict[str, Any], include_play_streams: list[dict] | N
     seen_urls: set[str] = set()
 
     # --- 1. Authenticated play streams (highest quality, if available) ---
-    # Sort play streams so highest resolution MP4 (1080p -> 720p -> 480p -> 360p) appears first
-    def _source_priority(s: dict[str, Any]) -> tuple[int, int]:
-        q = str(s.get("quality", "")).lower()
+    # Sort play streams so segmented formats (HLS/DASH) come first — they stream
+    # through /proxy as short segment requests, which is far more reliable on
+    # Passenger shared hosting than long single-file MP4 Range streams.
+    # Within each format bucket, highest resolution first (1080p -> 720p -> ...).
+    def _format_bucket(s: dict[str, Any]) -> int:
         url = str(s.get("url", "")).lower()
-        # Quality order: 1080p (0), 720p (1), 480p (2), 360p (3), Auto/DASH (4), others (5)
-        if "1080p" in q or "1080" in q:
-            p_qual = 0
-        elif "720p" in q or "720" in q:
-            p_qual = 1
-        elif "480p" in q or "480" in q:
-            p_qual = 2
-        elif "360p" in q or "360" in q:
-            p_qual = 3
-        elif "auto" in q or ".mpd" in url or ".m3u8" in url:
-            p_qual = 4
-        else:
-            p_qual = 5
-        return (p_qual, 0)
+        ftype = str(s.get("type", "")).lower()
+        if "hls" in ftype or ".m3u8" in url:
+            return 0  # HLS segments
+        if "dash" in ftype or ".mpd" in url:
+            return 1  # DASH segments
+        return 2  # single-file MP4
+
+    def _quality_bucket(s: dict[str, Any]) -> int:
+        q = str(s.get("quality", "")).lower()
+        if "4k" in q or "2160" in q:
+            return 0
+        if "1080" in q:
+            return 1
+        if "720" in q:
+            return 2
+        if "480" in q:
+            return 3
+        if "360" in q:
+            return 4
+        return 5
+
+    def _source_priority(s: dict[str, Any]) -> tuple[int, int]:
+        return (_format_bucket(s), _quality_bucket(s))
 
     play_items = list(include_play_streams or [])
     play_items.sort(key=_source_priority)
@@ -512,20 +523,36 @@ def extract_sources(detail: dict[str, Any], include_play_streams: list[dict] | N
             seen_final.add(s["url"])
             deduped.append(s)
 
-    def _final_sort_key(s: dict[str, Any]) -> int:
+    def _final_sort_key(s: dict[str, Any]) -> tuple[int, int, int]:
         src = s.get("source", "")
         q = str(s.get("quality", "")).lower()
         u = str(s.get("url", "")).lower()
-        if src == "play":
-            if "1080" in q or "4k" in q: return 0
-            if "720" in q: return 1
-            if "480" in q: return 2
-            if "360" in q: return 3
-            if "auto" in q or ".mpd" in u or ".m3u8" in u: return 4
-            return 5
-        if src == "community": return 6
-        if src == "trailer": return 7
-        return 8
+        # Format first: segmented (HLS/DASH) before single-file MP4 — more
+        # resilient through the /proxy on Passenger shared hosting.
+        if "hls" in str(s.get("type", "")).lower() or ".m3u8" in u:
+            fmt_bucket = 0
+        elif "dash" in str(s.get("type", "")).lower() or ".mpd" in u:
+            fmt_bucket = 1
+        else:
+            fmt_bucket = 2
+
+        # Quality within the format bucket
+        if "4k" in q or "2160" in q:
+            q_bucket = 0
+        elif "1080" in q:
+            q_bucket = 1
+        elif "720" in q:
+            q_bucket = 2
+        elif "480" in q:
+            q_bucket = 3
+        elif "360" in q:
+            q_bucket = 4
+        else:
+            q_bucket = 5
+
+        # Source last: play before community before trailer
+        src_bucket = 0 if src == "play" else 1 if src == "community" else 2
+        return (fmt_bucket, q_bucket, src_bucket)
 
     deduped.sort(key=_final_sort_key)
 

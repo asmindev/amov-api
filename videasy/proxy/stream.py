@@ -100,13 +100,30 @@ async def do_proxy_stream(
         await resp.aclose()
         raise HTTPException(status_code=404, detail=f"Resource not found: {target_url}")
 
+    # Idle timeout: if the upstream CDN sends nothing for this long (e.g. the
+    # client paused or disconnected), close the stream instead of leaving a
+    # pending ASGI task on Passenger shared hosting ("Task was destroyed but it
+    # is pending!").
+    IDLE_CHUNK_TIMEOUT = 60.0
+
     async def stream_generator():
         try:
-            async for chunk in resp.aiter_bytes(chunk_size=64 * 1024):
+            # Per-chunk idle timeout: a stalled CDN or a client that stopped
+            # reading (paused / disconnected) will time out instead of leaving
+            # a pending ASGI task that logs "Task was destroyed but it is
+            # pending!" on Passenger shared hosting.
+            while True:
+                try:
+                    chunk = await asyncio.wait_for(
+                        resp.aiter_bytes(chunk_size=64 * 1024).__anext__(),
+                        timeout=IDLE_CHUNK_TIMEOUT,
+                    )
+                except StopAsyncIteration:
+                    break
                 yield chunk
         except asyncio.CancelledError:
             logger.debug("Proxy stream cancelled during shutdown for %s", target_url)
-        except (httpx.TimeoutException, httpx.RequestError, Exception) as e:
+        except (asyncio.TimeoutError, httpx.TimeoutException, httpx.RequestError, Exception) as e:
             logger.debug("Proxy stream ended for %s: %s", target_url, e)
         finally:
             try:

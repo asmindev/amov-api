@@ -38,11 +38,11 @@ def create_proxy_client() -> httpx.AsyncClient:
     """
     return httpx.AsyncClient(
         http2=False,
-        timeout=httpx.Timeout(connect=10.0, read=None, write=None, pool=10.0),
+        timeout=httpx.Timeout(connect=5.0, read=None, write=None, pool=5.0),
         headers=build_default_headers(),
         limits=httpx.Limits(
-            max_connections=100,
-            max_keepalive_connections=20,
-            keepalive_expiry=30,
+            max_connections=40,
+            max_keepalive_connections=10,
+            keepalive_expiry=20,
         ),
     )
