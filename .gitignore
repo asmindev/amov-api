@@ -18,6 +18,9 @@ tmp/
 logs/
 .mimocode/
 
+# Editor temp files (settings.local.json.tmp.*)
+.claude/*.tmp.*
+
 # IDE
 .vscode/
 .idea/
