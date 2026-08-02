@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.venv/bin/python -m pytest tests/test_titles.py -q)",
+      "Bash(.venv/bin/python -c \"import rapidfuzz; print\\('rapidfuzz', rapidfuzz.__version__\\)\")",
+      "Bash(npx tsc *)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'fix\\(moviebox\\): verify resolved film matches requested title/year *)"
+    ]
+  }
+}

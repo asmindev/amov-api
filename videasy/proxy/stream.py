@@ -14,6 +14,22 @@ from videasy.proxy.headers import get_domain_headers
 logger = logging.getLogger("videasy")
 
 
+def raise_upstream_timeout(exc: httpx.TimeoutException, url: str) -> None:
+    """Log a precise timeout type and raise a 504 so the cause is visible in app.log.
+
+    Distinguishes connect (TCP/TLS handshake blackholed — usually the CDN blocking
+    the host's egress IP), pool (no free pooled connection), and read/write timeouts.
+    """
+    kind = {
+        httpx.ConnectTimeout: "connect (TCP/TLS handshake)",
+        httpx.PoolTimeout: "connection pool (no free connection)",
+        httpx.ReadTimeout: "read",
+        httpx.WriteTimeout: "write",
+    }.get(type(exc), "request")
+    logger.error("Upstream %s timeout for %s", kind, url)
+    raise HTTPException(status_code=504, detail=f"Upstream {kind} timeout for: {url}")
+
+
 async def do_proxy_stream(
     request: Request,
     target_url: str,
@@ -47,8 +63,12 @@ async def do_proxy_stream(
     req = client.build_request("GET", target_url, headers=proxy_headers)
     try:
         resp = await client.send(req, stream=True, follow_redirects=True)
-    except httpx.TimeoutException:
-        raise HTTPException(status_code=504, detail="Upstream timeout connecting to stream")
+    except httpx.ConnectTimeout as e:
+        raise_upstream_timeout(e, target_url)
+    except httpx.PoolTimeout as e:
+        raise_upstream_timeout(e, target_url)
+    except httpx.TimeoutException as e:
+        raise_upstream_timeout(e, target_url)
     except httpx.RequestError as e:
         raise HTTPException(status_code=502, detail=f"Upstream connection error: {e}")
 

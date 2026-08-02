@@ -9,7 +9,7 @@ from fastapi.responses import StreamingResponse
 from starlette.responses import Response
 
 from videasy.proxy.middleware import encode_dash_token
-from videasy.proxy.stream import do_proxy_stream
+from videasy.proxy.stream import do_proxy_stream, raise_upstream_timeout
 
 router = APIRouter(tags=["Proxy"])
 
@@ -54,8 +54,12 @@ async def proxy_hls(
     req = client.build_request("GET", url, headers=proxy_headers)
     try:
         resp = await client.send(req, stream=True, follow_redirects=True)
-    except httpx.TimeoutException:
-        raise HTTPException(status_code=504, detail="Upstream timeout connecting to stream")
+    except httpx.ConnectTimeout as e:
+        raise_upstream_timeout(e, url)
+    except httpx.PoolTimeout as e:
+        raise_upstream_timeout(e, url)
+    except httpx.TimeoutException as e:
+        raise_upstream_timeout(e, url)
     except httpx.RequestError as e:
         raise HTTPException(status_code=502, detail=f"Upstream connection error: {e}")
 
@@ -68,8 +72,10 @@ async def proxy_hls(
 
     # ── DASH MPD: rewrite init/media URLs to /dash/{token}/... (stateless) ──
     if ".mpd" in u_lower or "application/dash+xml" in resp.headers.get("content-type", ""):
-        raw_xml = (await resp.aread()).decode("utf-8", errors="ignore")
-        await resp.aclose()
+        try:
+            raw_xml = (await resp.aread()).decode("utf-8", errors="ignore")
+        finally:
+            await resp.aclose()
 
         base_dir = url.rsplit("/", 1)[0] + "/"
         token = encode_dash_token(base_dir, headers.strip())
@@ -101,8 +107,10 @@ async def proxy_hls(
     # ── HLS M3U8: rewrite relative segment/variant URLs to absolute ──
     is_m3u8 = ".m3u8" in u_lower or "application/vnd.apple.mpegurl" in resp.headers.get("content-type", "")
     if is_m3u8:
-        raw = (await resp.aread()).decode("utf-8", errors="ignore")
-        await resp.aclose()
+        try:
+            raw = (await resp.aread()).decode("utf-8", errors="ignore")
+        finally:
+            await resp.aclose()
 
         base_url = url.rsplit("/", 1)[0] + "/"
 
@@ -128,6 +136,11 @@ async def proxy_hls(
         )
 
     # ── Non-MPD: stream directly ──
+    # Release the probe connection checked out above BEFORE delegating to
+    # do_proxy_stream, which opens its own stream. Leaving it open leaked one
+    # connection per non-manifest request and eventually exhausted the pool
+    # (max_connections=40), causing spurious "no free connection" 504s.
+    await resp.aclose()
     return await do_proxy_stream(
         request,
         url,

@@ -9,6 +9,7 @@ from urllib.parse import parse_qs, urlparse
 import httpx
 
 from videasy.config import settings
+from videasy.utils.titles import normalize_title
 
 logger = logging.getLogger("moviebox")
 
@@ -697,18 +698,68 @@ async def _fetch_tmdb_original_title(client: httpx.AsyncClient, moviedb_id: int)
     return ""
 
 
+def _match_search_result(
+    results: list[dict[str, Any]],
+    requested_title: str,
+    subject_type: int,
+    year: str = "",
+    english_title: str = "",
+) -> dict[str, Any] | None:
+    """Pick the search result that is the *same film* as ``requested_title``.
+
+    Matching is deliberately simple: the normalized requested title must equal
+    the normalized result title (``==``), with ``english_title`` as a second
+    accepted candidate (OR). Cinemeta/TMDB titles are consistent, so an exact
+    normalized match is sufficient and avoids the year-only fallback that used
+    to resolve to a *different* same-year film.
+
+    When no exact title match exists but a result with the right subject type /
+    year is present, the first such result is still returned so the caller has a
+    subject to work with — but ``fetch_sources`` then enforces the real match
+    (title OR + exact year) and forces empty sources on mismatch.
+    """
+    candidates: list[dict[str, Any]] = []
+    req_norm = normalize_title(requested_title)
+    eng_norm = normalize_title(english_title) if english_title else ""
+    for res in results:
+        if res.get("subjectType") != subject_type:
+            continue
+        res_norm = normalize_title(str(res.get("title", "")))
+        if res_norm == req_norm or (eng_norm and res_norm == eng_norm):
+            return res
+
+    if not year:
+        # No year to disambiguate: fall back to the first type-appropriate result.
+        for res in results:
+            if res.get("subjectType") == subject_type:
+                candidates.append(res)
+        return candidates[0] if candidates else None
+
+    # Exact title absent: prefer same subject type + same year, else the first
+    # type-appropriate result.
+    for res in results:
+        if res.get("subjectType") == subject_type and str(res.get("year", "")) == year:
+            return res
+    for res in results:
+        if res.get("subjectType") == subject_type:
+            candidates.append(res)
+    return candidates[0] if candidates else None
+
+
 async def resolve_imdb_to_moviebox(
     client: httpx.AsyncClient,
     imdb_id: str,
     original_title: str = "",
+    english_title: str = "",
     media_type: str = "movie",
     year: str = "",
 ) -> tuple[str, str]:
     """Resolve an IMDB ID (e.g. tt9018736) to Moviebox (subject_id, detail_path).
 
-    When ``original_title`` is provided the Cinemeta metadata lookup is skipped
-    entirely — the title is searched directly on Moviebox which is both faster
-    and more accurate for localised titles.
+    When ``original_title``/``english_title`` are provided the Cinemeta metadata
+    lookup is skipped entirely — the title is searched directly on Moviebox which
+    is both faster and more accurate for localised titles. ``fetch_sources``
+    performs the real title/year gate and forces empty sources on mismatch.
     """
     if not imdb_id.startswith("tt"):
         return "", ""
@@ -720,48 +771,27 @@ async def resolve_imdb_to_moviebox(
         if original_title:
             title = original_title
             results = await search_titles(client, title)
-            clean_title = re.sub(r"[^\w\s]", "", title, flags=re.UNICODE).lower().strip()
-
-            # Exact or substring year + title match
-            for res in results:
-                if res.get("subjectType") != subject_type:
-                    continue
-                res_title = re.sub(r"[^\w\s]", "", res.get("title", ""), flags=re.UNICODE).lower().strip()
-                res_year = str(res.get("year", ""))
-                if clean_title in res_title or res_title in clean_title:
-                    if not year or res_year == year:
-                        return str(res.get("subjectId", "")), str(res.get("detailPath", ""))
-
-            # Year-only fallback: first result matching exact year
-            if year:
-                for res in results:
-                    if res.get("subjectType") != subject_type:
-                        continue
-                    if str(res.get("year", "")) == year:
-                        logger.info(
-                            "IMDB %s matched by year-only: %s -> %s (%s)",
-                            imdb_id, title, res.get("title"), res.get("subjectId"),
-                        )
-                        return str(res.get("subjectId", "")), str(res.get("detailPath", ""))
+            match = _match_search_result(results, title, subject_type, year, english_title)
+            if match:
+                logger.info(
+                    "IMDB %s matched via original title: %s -> %s (%s)",
+                    imdb_id, title, match.get("subjectId"), match.get("title"),
+                )
+                return str(match.get("subjectId", "")), str(match.get("detailPath", ""))
 
         # --- Slow path: fetch metadata from Cinemeta, then search ---
         meta = {}
-        r = await client.get(
-            f"{CINEMETA_BASE}/meta/series/{imdb_id}.json",
-            follow_redirects=True,
-            timeout=5.0,
-        )
-        if r.status_code == 200:
-            meta = r.json().get("meta", {}) or {}
-
-        if not meta:
+        for kind in ("series", "movie"):
             r = await client.get(
-                f"{CINEMETA_BASE}/meta/movie/{imdb_id}.json",
+                f"{CINEMETA_BASE}/meta/{kind}/{imdb_id}.json",
                 follow_redirects=True,
                 timeout=5.0,
             )
             if r.status_code == 200:
-                meta = r.json().get("meta", {}) or {}
+                m = r.json().get("meta", {}) or {}
+                if m:
+                    meta = m
+                    break
 
         if not meta:
             logger.warning("Reverse IMDB lookup failed for %s", imdb_id)
@@ -769,59 +799,35 @@ async def resolve_imdb_to_moviebox(
 
         title = meta.get("name", "")
         year = str(meta.get("year") or meta.get("releaseInfo") or "")[:4]
-        media_type = meta.get("type", "movie")
-        subject_type = 2 if media_type == "series" else 1
+        meta_type = meta.get("type", "movie")
+        subject_type = 2 if meta_type == "series" else 1
 
         if not title:
             return "", ""
 
         results = await search_titles(client, title)
+        match = _match_search_result(results, title, subject_type, year)
+        if match:
+            logger.info(
+                "IMDB %s matched via Cinemeta: %s -> %s (%s)",
+                imdb_id, title, match.get("subjectId"), match.get("title"),
+            )
+            return str(match.get("subjectId", "")), str(match.get("detailPath", ""))
 
-        clean_req_title = re.sub(r"[^\w\s]", "", title, flags=re.UNICODE).lower().strip()
-
-        # 1. First priority: exact subjectType + year match + title similarity
-        for res in results:
-            if res.get("subjectType") == subject_type:
-                res_title = re.sub(r"[^\w\s]", "", res.get("title", ""), flags=re.UNICODE).lower().strip()
-                res_year = str(res.get("year", ""))
-                if clean_req_title in res_title or res_title in clean_req_title:
-                    if not year or res_year == year:
-                        return str(res.get("subjectId", "")), str(res.get("detailPath", ""))
-
-        # 2. Second priority: subjectType match and title prefix match
-        for res in results:
-            if res.get("subjectType") == subject_type:
-                res_title = re.sub(r"[^\w\s]", "", res.get("title", ""), flags=re.UNICODE).lower().strip()
-                if clean_req_title in res_title or res_title in clean_req_title:
-                    return str(res.get("subjectId", "")), str(res.get("detailPath", ""))
-
-        # 3. Fallback: try TMDB original title
+        # Fallback: try TMDB original title
         moviedb_id = meta.get("moviedb_id") or meta.get("external_ids", {}).get("tmdb_id")
         if moviedb_id:
             orig_title = await _fetch_tmdb_original_title(client, int(moviedb_id))
             if orig_title and orig_title.lower() != title.lower():
                 logger.info("Trying TMDB original title %r for %s", orig_title, imdb_id)
                 orig_results = await search_titles(client, orig_title)
-                clean_orig = re.sub(r"[^\w\s]", "", orig_title, flags=re.UNICODE).lower().strip()
-
-                year_candidates: list[dict] = []
-                for res in orig_results:
-                    if res.get("subjectType") != subject_type:
-                        continue
-                    res_title = re.sub(r"[^\w\s]", "", res.get("title", ""), flags=re.UNICODE).lower().strip()
-                    res_year = str(res.get("year", ""))
-                    exact_year_match = year and res_year == year
-                    if not exact_year_match:
-                        continue
-                    if clean_orig in res_title or res_title in clean_orig:
-                        logger.info("Matched via TMDB original title (substring): %s -> %s", orig_title, res.get("subjectId"))
-                        return str(res.get("subjectId", "")), str(res.get("detailPath", ""))
-                    year_candidates.append(res)
-
-                if year_candidates:
-                    res = year_candidates[0]
-                    logger.info("Matched via TMDB original title (year-only): %s -> %s (%s)", orig_title, res.get("title"), res.get("subjectId"))
-                    return str(res.get("subjectId", "")), str(res.get("detailPath", ""))
+                match = _match_search_result(orig_results, orig_title, subject_type, year)
+                if match:
+                    logger.info(
+                        "Matched via TMDB original title: %s -> %s (%s)",
+                        orig_title, match.get("subjectId"), match.get("title"),
+                    )
+                    return str(match.get("subjectId", "")), str(match.get("detailPath", ""))
 
     except Exception as exc:
         logger.warning("moviebox reverse lookup failed: %s", exc)
@@ -838,6 +844,7 @@ async def fetch_sources(
     try_play: bool = True,
     cookie: str = "",
     original_title: str = "",
+    english_title: str = "",
     media_type: str = "movie",
     year: str = "",
 ) -> dict[str, Any]:
@@ -851,7 +858,8 @@ async def fetch_sources(
         lang:           Preferred subtitle language code.
         try_play:       Whether to attempt the authenticated play endpoint.
         cookie:         Optional user cookie string (e.g. mb_token=...; token=...)
-        original_title: Original/localized title (required when url_or_id is an IMDB ID).
+        original_title: Original title (required when url_or_id is an IMDB ID).
+        english_title:  English title (used alongside original_title for matching).
         media_type:     "movie" or "tv".
         year:           Release year (e.g. "2024").
 
@@ -863,6 +871,7 @@ async def fetch_sources(
         sub_id, det_path = await resolve_imdb_to_moviebox(
             client, url_or_id.strip(),
             original_title=original_title,
+            english_title=english_title,
             media_type=media_type,
             year=year,
         )
@@ -879,15 +888,34 @@ async def fetch_sources(
         detail_path=parsed.detail_path,
     )
 
-    # Resolve the actual subjectId from the detail response for the play endpoint
+    # ── Post-fetch matching (all logic lives here in the backend) ─────────────
+    # The resolved Moviebox subject must be the *same film* the caller asked for.
+    # Two conditions, checked in order:
+    #   1. Title — exact (normalized) match against original_title OR english_title.
+    #   2. Year  — must equal the requested year exactly.
+    # If either fails we return empty sources rather than streaming a different
+    # film. titleMatched/requestedTitle are still reported for the client's info.
+    detail_title = str(detail.get("subject", {}).get("title", ""))
+    detail_year = (detail.get("subject", {}).get("releaseDate", "") or "")[:4]
+    norm_detail = normalize_title(detail_title)
+    requested_title = original_title or english_title or detail_title
+    title_matched = (
+        normalize_title(original_title) == norm_detail
+        or (bool(english_title) and normalize_title(english_title) == norm_detail)
+    ) if original_title else True
+
     subject_id = str(detail.get("subject", {}).get("subjectId") or parsed.subject_id or "")
     detail_path = str(detail.get("subject", {}).get("detailPath") or parsed.detail_path or "")
+
+    # Year mismatch → force empty sources (do not stream a different year's film).
+    year_mismatch = bool(year) and detail_year and detail_year != year
 
     req_se = se if se > 0 else parsed.se
     req_ep = ep if ep > 0 else parsed.ep
 
     play_streams: list[dict] = []
-    if try_play and subject_id:
+    # Skip play fetch entirely when the film does not match what was asked for.
+    if try_play and subject_id and title_matched and not year_mismatch:
         play_streams = await fetch_play_streams(
             client, subject_id,
             detail_path=detail_path,
@@ -911,6 +939,22 @@ async def fetch_sources(
 
     result = extract_sources(detail, include_play_streams=play_streams)
 
+    # Report the requested-vs-resolved title so the client can judge a mismatch
+    # (translated title vs different film) without us guessing.
+    result["requestedTitle"] = requested_title
+    result["titleMatched"] = title_matched
+    result["yearMismatch"] = year_mismatch
+
+    # The film does not match what the caller asked for (title or year) — force
+    # empty sources so we never stream a different film.
+    if not title_matched or year_mismatch:
+        logger.warning(
+            "Moviebox subject mismatch: requested=%r (year=%s) resolved=%r (year=%s) "
+            "titleMatched=%s yearMismatch=%s — returning empty sources",
+            requested_title, year, detail_title, detail_year, title_matched, year_mismatch,
+        )
+        result["sources"] = []
+
     # Automatically resolve IMDB ID for Moviebox entry
     if orig_input.strip().startswith("tt"):
         result["imdbId"] = orig_input.strip()
@@ -922,41 +966,43 @@ async def fetch_sources(
             subject_type=result.get("subjectType", 1),
         )
 
-    # Fetch rich subtitles with real CDN .srt URLs from caption endpoint
+    # Fetch rich subtitles with real CDN .srt URLs from caption endpoint.
+    # Skipped entirely when the film does not match (sources are already empty).
     subtitles: list[dict[str, str]] = []
     seen_sub_urls: set[str] = set()
 
-    for s in play_streams:
-        res_id = str(s.get("id", ""))
-        stream_type = str(s.get("type", "")).upper()
-        if res_id:
-            fmt = "DASH" if "DASH" in stream_type else "MP4"
+    if title_matched and not year_mismatch:
+        for s in play_streams:
+            res_id = str(s.get("id", ""))
+            stream_type = str(s.get("type", "")).upper()
+            if res_id:
+                fmt = "DASH" if "DASH" in stream_type else "MP4"
+                subs = await fetch_moviebox_captions(
+                    client,
+                    subject_id=subject_id,
+                    detail_path=detail_path,
+                    resource_id=res_id,
+                    format_type=fmt,
+                )
+                for sub in subs:
+                    if sub["url"] not in seen_sub_urls:
+                        seen_sub_urls.add(sub["url"])
+                        subtitles.append(sub)
+                if subtitles:
+                    break
+
+        if not subtitles and subject_id:
             subs = await fetch_moviebox_captions(
                 client,
                 subject_id=subject_id,
                 detail_path=detail_path,
-                resource_id=res_id,
-                format_type=fmt,
+                resource_id="",
+                format_type="MP4",
             )
             for sub in subs:
                 if sub["url"] not in seen_sub_urls:
                     seen_sub_urls.add(sub["url"])
                     subtitles.append(sub)
-            if subtitles:
-                break
-
-    if not subtitles and subject_id:
-        subs = await fetch_moviebox_captions(
-            client,
-            subject_id=subject_id,
-            detail_path=detail_path,
-            resource_id="",
-            format_type="MP4",
-        )
-        for sub in subs:
-            if sub["url"] not in seen_sub_urls:
-                seen_sub_urls.add(sub["url"])
-                subtitles.append(sub)
 
     result["subtitles"] = subtitles
     return result

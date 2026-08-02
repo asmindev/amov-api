@@ -12,6 +12,12 @@ class Settings(BaseSettings):
         "Chrome/137.0.0.0 Safari/537.36"
     )
     request_timeout: int = 30
+    proxy_connect_timeout: float = 10.0
+    proxy_pool_timeout: float = 10.0
+    # Optional outbound proxy (e.g. "http://user:pass@host:port") used only by the
+    # streaming proxy client. Set this when the host's egress IP is blocked/dropped
+    # by the CDNs (ConnectTimeout) so CDN traffic can exit through a non-blocked IP.
+    proxy_outbound: str = ""
     cache_ttl_offset: int = 5_000
     wyzie_api_key: str = ""
 

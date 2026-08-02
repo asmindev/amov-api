@@ -32,13 +32,21 @@ def create_api_client() -> httpx.AsyncClient:
 def create_proxy_client() -> httpx.AsyncClient:
     """Client for proxy streaming (HLS, MP4, DASH segments).
 
-    Uses HTTP/2 for multiplexed CDN connections (matching browser behavior for Aliyun Tengine CDN).
     No read timeout — streams must run for as long as the video plays.
-    Connect timeout is 5s so dead/stalled CDNs fail fast.
+    Connect timeout is configurable (default 10s). If the CDN is reachable, the
+    handshake takes <1s; a full connect timeout almost always means the CDN is
+    dropping the host's egress IP (see VIDEASY_PROXY_OUTBOUND to route through a
+    non-blocked proxy).
     """
     return httpx.AsyncClient(
         http2=False,
-        timeout=httpx.Timeout(connect=5.0, read=None, write=None, pool=5.0),
+        proxy=settings.proxy_outbound or None,
+        timeout=httpx.Timeout(
+            connect=settings.proxy_connect_timeout,
+            read=None,
+            write=None,
+            pool=settings.proxy_pool_timeout,
+        ),
         headers=build_default_headers(),
         limits=httpx.Limits(
             max_connections=40,

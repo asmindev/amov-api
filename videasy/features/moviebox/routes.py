@@ -27,6 +27,7 @@ async def moviebox_sources(
     subjectId: str = Query(default="", min_length=0, description="Moviebox subject ID (numeric)"),
     imdbId: str = Query(default="", pattern=r"^tt\d+$|^$", description="IMDB ID (e.g. tt9018736)"),
     originalTitle: str = Query(default="", min_length=0, description="Original title (required when using imdbId)"),
+    englishTitle: str = Query(default="", min_length=0, description="English title (optional; used with originalTitle for title matching)"),
     mediaType: str = Query(default="movie", pattern=r"^(movie|tv)$", description="Media type: movie or tv"),
     year: str = Query(default="", pattern=r"^\d{4}$|^$", description="Release year (e.g. 2024)"),
     url: str = Query(default="", min_length=0, description="Full themoviebox.xyz URL"),
@@ -48,6 +49,7 @@ async def moviebox_sources(
             request.app.state.api_client, input_str,
             se=int(seasonId), ep=int(episodeId), cookie=cookie,
             original_title=originalTitle.strip(),
+            english_title=englishTitle.strip(),
             media_type=mediaType,
             year=year.strip(),
         )
@@ -93,6 +95,9 @@ async def moviebox_sources(
             imdbId=data.get("imdbId") or None,
             year=data.get("year") or None,
             cover=data.get("cover") or None,
+            requestedTitle=data.get("requestedTitle"),
+            titleMatched=data.get("titleMatched"),
+            yearMismatch=data.get("yearMismatch"),
         )
 
         return UnifiedMediaResponse(

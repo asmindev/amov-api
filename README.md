@@ -100,6 +100,10 @@ Fetch MP4 / DASH / HLS streams and CDN `.srt` subtitles. Supports reverse IMDB l
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `imdbId` | string | * | IMDB ID (e.g. `tt9018736` — auto-resolves to Moviebox) |
+| `originalTitle` | string | when `imdbId` | Original title (from TMDB/Cinemeta) |
+| `englishTitle` | string | | English title (secondary title match) |
+| `year` | string | | Release year (exact match gate — mismatch returns empty sources) |
+| `mediaType` | string | | `movie` or `tv` (default: `movie`) |
 | `subjectId` | string | * | Moviebox internal numerical ID |
 | `url` | string | * | Full `themoviebox.xyz` URL |
 | `seasonId` | string | | Season number, TV only (default: `0`) |
@@ -108,9 +112,15 @@ Fetch MP4 / DASH / HLS streams and CDN `.srt` subtitles. Supports reverse IMDB l
 
 *\* Provide at least one of `imdbId`, `subjectId`, or `url`.*
 
+**Title matching (backend-enforced):** after resolving the Moviebox detail, the
+resolved title must equal `originalTitle` or `englishTitle` (normalized exact
+match) AND the year must equal the requested `year`. On a title or year
+mismatch the response returns **empty `sources`** (plus `titleMatched` /
+`yearMismatch` flags in `meta`) so a different film is never streamed.
+
 ```bash
-# By IMDB ID
-curl "http://localhost:8000/moviebox/sources?imdbId=tt9018736&seasonId=1&episodeId=1"
+# By IMDB ID (original + english title + year for the match gate)
+curl "http://localhost:8000/moviebox/sources?imdbId=tt9018736&originalTitle=Ketindihan&englishTitle=Sleep+Paralysis&year=2025&seasonId=1&episodeId=1"
 
 # By subjectId
 curl "http://localhost:8000/moviebox/sources?subjectId=8313012068559605176"
@@ -146,7 +156,10 @@ Both `/sources` and `/moviebox/sources` return the same `UnifiedMediaResponse`:
     "tmdbId": "82452",
     "imdbId": "tt9018736",
     "year": "2024",
-    "cover": "https://pbcdnw.aoneroom.com/..."
+    "cover": "https://pbcdnw.aoneroom.com/...",
+    "requestedTitle": "Avatar: The Last Airbender",
+    "titleMatched": true,
+    "yearMismatch": false
   },
   "episode": { "season": 1, "episode": 1 },
   "sources": [

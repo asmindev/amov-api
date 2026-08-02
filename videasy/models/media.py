@@ -13,6 +13,20 @@ class MediaMeta(BaseModel):
     imdbId: str | None = Field(default=None, description="IMDB ID if available (e.g. tt0816692)")
     year: str | None = Field(default=None, description="Release year")
     cover: str | None = Field(default=None, description="Cover image URL if available")
+    requestedTitle: str | None = Field(
+        default=None, description="Title the client asked for (original title from params)"
+    )
+    titleMatched: bool | None = Field(
+        default=None,
+        description="True when the resolved Moviebox title equals requestedTitle or the "
+        "English title (normalized). False means the resolved subject is a different "
+        "film or a translation mismatch — in which case sources are returned empty.",
+    )
+    yearMismatch: bool | None = Field(
+        default=None,
+        description="True when the resolved Moviebox release year differs from the "
+        "requested year — sources are returned empty.",
+    )
 
 
 class EpisodeInfo(BaseModel):
