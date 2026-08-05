@@ -1058,6 +1058,14 @@ async def fetch_sources(
                         if result["sources"]:
                             result["titleMatched"] = True
                             result["yearMismatch"] = False
+                            if "meta" in flik_data:
+                                fm = flik_data["meta"]
+                                result["title"] = fm.get("title", result.get("title"))
+                                result["imdbId"] = fm.get("imdb_id", result.get("imdbId"))
+                                if fm.get("release_date"):
+                                    result["year"] = fm["release_date"].split("-")[0]
+                                if fm.get("poster_path"):
+                                    result["cover"] = f"https://image.tmdb.org/t/p/w500{fm['poster_path']}"
                     if "subtitles" in flik_data:
                         if "subtitles" not in result:
                             result["subtitles"] = []
