@@ -739,12 +739,28 @@ def _match_search_result(
     candidates: list[dict[str, Any]] = []
     req_norm = normalize_title(requested_title)
     eng_norm = normalize_title(english_title) if english_title else ""
+    
+    title_matches: list[dict[str, Any]] = []
     for res in results:
         if res.get("subjectType") != subject_type:
             continue
         res_norm = normalize_title(str(res.get("title", "")))
         if res_norm == req_norm or (eng_norm and res_norm == eng_norm):
-            return res
+            title_matches.append(res)
+            
+    if title_matches:
+        # Prefer the one whose raw title exactly matches (case-insensitive)
+        for c in title_matches:
+            t = str(c.get("title", "")).lower()
+            if t == requested_title.lower() or (english_title and t == english_title.lower()):
+                return c
+        
+        # Next, prefer titles without "[" (avoids [Indonesian], [Hindi] dubs)
+        clean_candidates = [c for c in title_matches if "[" not in str(c.get("title", ""))]
+        if clean_candidates:
+            return clean_candidates[0]
+            
+        return title_matches[0]
 
     if not year:
         # No year to disambiguate: fall back to the first type-appropriate result.
