@@ -100,8 +100,9 @@ def create_app() -> FastAPI:
     from videasy.features.subtitles.routes import router as subtitles_router
     from videasy.features.info.routes import router as info_router
     from videasy.features.player.routes import router as player_router
+    from videasy.features.lk21.routes import router as lk21_router
 
-    for r in [proxy_router, sources_router, moviebox_router, subtitles_router, info_router, player_router]:
+    for r in [proxy_router, sources_router, moviebox_router, subtitles_router, info_router, player_router, lk21_router]:
         app.include_router(r)
 
     return app
