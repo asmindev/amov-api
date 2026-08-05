@@ -71,6 +71,27 @@ DOMAIN_HEADERS: dict[str, dict[str, str]] = {
         "Sec-Fetch-Mode": "cors",
         "Sec-Fetch-Site": "cross-site",
     },
+    # LK21 video CDN
+    "playcdn.de": {
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:152.0) Gecko/20100101 Firefox/152.0",
+        "Accept": "*/*",
+        "Accept-Encoding": "identity",
+        "Origin": "https://playcdn.de",
+        "Referer": "https://playcdn.de/",
+        "Sec-Fetch-Dest": "video",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "cross-site",
+    },
+    "videonode.de": {
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:152.0) Gecko/20100101 Firefox/152.0",
+        "Accept": "*/*",
+        "Accept-Encoding": "identity",
+        "Origin": "https://videonode.de",
+        "Referer": "https://videonode.de/",
+        "Sec-Fetch-Dest": "video",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "cross-site",
+    }
 }
 
 

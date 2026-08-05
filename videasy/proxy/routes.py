@@ -112,13 +112,20 @@ async def proxy_hls(
         finally:
             await resp.aclose()
 
-        base_url = url.rsplit("/", 1)[0] + "/"
-
+        from urllib.parse import urljoin, quote, urlencode
+        
+        # Keep original query params (like imdbId, headers) but replace the url
+        original_params = dict(request.query_params)
+        original_params.pop("url", None)
+        qs_suffix = f"&{urlencode(original_params)}" if original_params else ""
+        
         rewritten_lines = []
         for line in raw.splitlines(keepends=True):
             stripped = line.strip()
             if stripped and not stripped.startswith("#") and not stripped.startswith(("http://", "https://")):
-                line = line.replace(stripped, base_url + stripped.lstrip("/"))
+                abs_url = urljoin(url, stripped)
+                proxied_url = f"/proxy?url={quote(abs_url)}{qs_suffix}"
+                line = line.replace(stripped, proxied_url)
             rewritten_lines.append(line)
 
         async def m3u8_gen():
