@@ -172,9 +172,9 @@ async def fetch_sources(
                             data["subtitles"] = []
                         for sub in flik_data["subtitles"]:
                             data["subtitles"].append({
-                                "lang": sub.get("lang", sub.get("language", "Unknown")),
-                                "language": sub.get("language", "un"),
-                                "url": sub.get("url", "")
+                                "lang": sub.get("lang") or sub.get("language") or sub.get("label") or "Unknown",
+                                "language": sub.get("language") or sub.get("label") or "un",
+                                "url": sub.get("url") or sub.get("file") or ""
                             })
         except Exception as exc:
             logger.debug("flikhub proxy error: %s", exc)
