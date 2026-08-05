@@ -1055,6 +1055,15 @@ async def fetch_sources(
                                 "type": q.get("type", "mp4"),
                                 "source": "play"
                             })
+                    if "subtitles" in flik_data:
+                        if "subtitles" not in result:
+                            result["subtitles"] = []
+                        for sub in flik_data["subtitles"]:
+                            result["subtitles"].append({
+                                "lang": sub.get("lang", sub.get("language", "Unknown")),
+                                "language": sub.get("language", "un"),
+                                "url": sub.get("url", "")
+                            })
         except Exception as exc:
             logger.debug("flikhub proxy error in moviebox native: %s", exc)
 
