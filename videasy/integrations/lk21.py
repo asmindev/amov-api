@@ -85,11 +85,19 @@ async def get_lk21_m3u8(client: httpx.AsyncClient, video_id: str, slug: str) -> 
 
 async def fetch_lk21_source(client: httpx.AsyncClient, title: str, year: str = "") -> dict | None:
     """High-level function to fetch LK21 source dict."""
-    slug = await search_lk21_slug(client, title, year)
-    if not slug:
-        return None
-        
+    
+    # 1. Try guessing the slug format: judul-lengkap-tahun
+    guessed_slug = f"{re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')}-{year}"
+    slug = guessed_slug
     video_id = await extract_lk21_video_id(client, slug)
+    
+    # 2. Fallback to Search API if guessing failed
+    if not video_id:
+        slug = await search_lk21_slug(client, title, year)
+        if not slug:
+            return None
+        video_id = await extract_lk21_video_id(client, slug)
+        
     if not video_id:
         return None
         
