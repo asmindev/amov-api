@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import time
+import json
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
@@ -1049,10 +1050,26 @@ async def fetch_sources(
                         if "sources" not in result:
                             result["sources"] = []
                         for q in flik_data["source"]["qualities"]:
+                            raw_url = q.get("url", "")
+                            parsed = urlparse(raw_url)
+                            qs = parse_qs(parsed.query)
+                            
+                            extracted_url = raw_url
+                            extracted_headers = None
+                            
+                            if "url" in qs:
+                                extracted_url = qs["url"][0]
+                                if "proxyHeaders" in qs:
+                                    try:
+                                        extracted_headers = json.loads(qs["proxyHeaders"][0])
+                                    except Exception:
+                                        pass
+                                        
                             result["sources"].append({
                                 "quality": f"{q.get('quality', 'Auto')} (Flikhub)",
-                                "url": q.get("url", ""),
+                                "url": extracted_url,
                                 "type": q.get("type", "mp4"),
+                                "headers": extracted_headers,
                                 "source": "play"
                             })
                         if result["sources"]:

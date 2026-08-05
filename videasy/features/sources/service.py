@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import base64
+import json
 import logging
 import time
 from typing import Any
-from urllib.parse import quote, urlencode
+from urllib.parse import quote, urlencode, urlparse, parse_qs
 
 import httpx
 from fastapi import HTTPException
@@ -148,10 +150,26 @@ async def fetch_sources(
                     if "sources" not in data:
                         data["sources"] = []
                     for q in flik_data["source"]["qualities"]:
+                        raw_url = q.get("url", "")
+                        parsed = urlparse(raw_url)
+                        qs = parse_qs(parsed.query)
+                        
+                        extracted_url = raw_url
+                        extracted_headers = None
+                        
+                        if "url" in qs:
+                            extracted_url = qs["url"][0]
+                            if "proxyHeaders" in qs:
+                                try:
+                                    extracted_headers = json.loads(qs["proxyHeaders"][0])
+                                except Exception:
+                                    pass
+                                    
                         data["sources"].append({
                             "quality": f"{q.get('quality', 'Auto')} (Flikhub)",
-                            "url": q.get("url", ""),
+                            "url": extracted_url,
                             "type": q.get("type", "mp4"),
+                            "headers": extracted_headers,
                             "source": "play"
                         })
                     if data["sources"]:
