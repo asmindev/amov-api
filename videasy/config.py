@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     proxy_outbound: str = ""
     cache_ttl_offset: int = 5_000
     wyzie_api_key: str = ""
+    opensubtitles_api_key: str = ""
 
     # Cinemeta (Stremio addon for metadata)
     cinemeta_base: str = "https://v3-cinemeta.strem.io"
