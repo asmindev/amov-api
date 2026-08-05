@@ -115,13 +115,17 @@ async def fetch_sources(
         raise HTTPException(status_code=429, detail="rate limited by upstream API — try again later")
     if cipher_resp.status_code == 500:
         raise HTTPException(status_code=502, detail=f"{provider.name}: upstream returned 500")
-    cipher_resp.raise_for_status()
-
-    cipher = cipher_resp.text.strip()
-    if not cipher:
-        raise HTTPException(status_code=502, detail=f"{provider.name}: empty response from upstream")
-
-    data = await decrypt(client, cipher, params.tmdbId, seed)
+    try:
+        cipher_resp.raise_for_status()
+        cipher = cipher_resp.text.strip()
+        if not cipher:
+            raise HTTPException(status_code=502, detail=f"{provider.name}: empty response from upstream")
+        data = await decrypt(client, cipher, params.tmdbId, seed)
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 404 and provider.name.lower() == "moviebox":
+            data = {"sources": [], "subtitles": []}
+        else:
+            raise
 
     if provider.name.lower() == "moviebox" and not data.get("sources"):
         try:
