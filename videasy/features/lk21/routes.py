@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 import httpx
 
-from videasy.core.http import get_client
+from videasy.deps import get_client
 from videasy.integrations.lk21 import fetch_lk21_source
 
 router = APIRouter(prefix="/lk21", tags=["lk21"])
