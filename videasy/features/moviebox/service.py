@@ -642,6 +642,23 @@ async def fetch_moviebox_captions(
     return []
 
 
+async def _get_tmdb_id_from_imdb(client: httpx.AsyncClient, imdb_id: str) -> str:
+    """Helper to fetch TMDB ID from Cinemeta for Flikhub proxy fallback."""
+    if not imdb_id or not imdb_id.startswith("tt"):
+        return ""
+    for kind in ("movie", "series"):
+        try:
+            r = await client.get(f"{CINEMETA_BASE}/meta/{kind}/{imdb_id}.json", timeout=3.0)
+            if r.status_code == 200:
+                meta = r.json().get("meta", {}) or {}
+                tid = meta.get("moviedb_id") or meta.get("external_ids", {}).get("tmdb_id")
+                if tid:
+                    return str(tid)
+        except Exception:
+            pass
+    return ""
+
+
 async def resolve_moviebox_imdb_id(
     client: httpx.AsyncClient,
     title: str,
@@ -1005,6 +1022,42 @@ async def fetch_sources(
                     subtitles.append(sub)
 
     result["subtitles"] = subtitles
+
+    # Flikhub Proxy Fallback
+    if not result.get("sources"):
+        try:
+            tmdb_id = ""
+            if orig_input.strip().startswith("tt"):
+                tmdb_id = await _get_tmdb_id_from_imdb(client, orig_input.strip())
+            if tmdb_id:
+                base_url = settings.flikhub_proxy_base.rstrip("/")
+                if media_type == "tv" and req_se and req_ep:
+                    flik_url = f"{base_url}/tv?id={tmdb_id}&season={req_se}&episode={req_ep}&mode=json&sources=moviebox&hevc=1"
+                else:
+                    flik_url = f"{base_url}/movie?id={tmdb_id}&mode=json&sources=moviebox&hevc=1"
+                
+                headers = {
+                    "Accept": "application/json",
+                    "Origin": "https://player.cinezo.live",
+                    "Referer": "https://player.cinezo.live/",
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                }
+                flik_resp = await client.get(flik_url, headers=headers, timeout=5.0)
+                if flik_resp.status_code == 200:
+                    flik_data = flik_resp.json()
+                    if "source" in flik_data and "qualities" in flik_data["source"]:
+                        if "sources" not in result:
+                            result["sources"] = []
+                        for q in flik_data["source"]["qualities"]:
+                            result["sources"].append({
+                                "quality": f"{q.get('quality', 'Auto')} (Flikhub)",
+                                "url": q.get("url", ""),
+                                "type": q.get("type", "mp4"),
+                                "source": "play"
+                            })
+        except Exception as exc:
+            logger.debug("flikhub proxy error in moviebox native: %s", exc)
+
     return result
 
 

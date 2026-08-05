@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     moviebox_play_base: str = "https://themoviebox.xyz"
     moviebox_play_endpoint: str = "/wefeed-h5api-bff/subject/play"
 
+    # Flikhub Fallback Proxy
+    flikhub_proxy_base: str = "https://proxy1.flikhub.net"
+
     model_config = {"env_prefix": "VIDEASY_", "env_file": ".env"}
 
 

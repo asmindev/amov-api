@@ -122,4 +122,35 @@ async def fetch_sources(
         raise HTTPException(status_code=502, detail=f"{provider.name}: empty response from upstream")
 
     data = await decrypt(client, cipher, params.tmdbId, seed)
+
+    if provider.name.lower() == "moviebox" and not data.get("sources"):
+        try:
+            base_url = settings.flikhub_proxy_base.rstrip("/")
+            if params.mediaType == "tv" and params.seasonId and params.episodeId:
+                flik_url = f"{base_url}/tv?id={params.tmdbId}&season={params.seasonId}&episode={params.episodeId}&mode=json&sources=moviebox&hevc=1"
+            else:
+                flik_url = f"{base_url}/movie?id={params.tmdbId}&mode=json&sources=moviebox&hevc=1"
+            
+            headers = {
+                "Accept": "application/json",
+                "Origin": "https://player.cinezo.live",
+                "Referer": "https://player.cinezo.live/",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            }
+            flik_resp = await client.get(flik_url, headers=headers, timeout=5.0)
+            if flik_resp.status_code == 200:
+                flik_data = flik_resp.json()
+                if "source" in flik_data and "qualities" in flik_data["source"]:
+                    if "sources" not in data:
+                        data["sources"] = []
+                    for q in flik_data["source"]["qualities"]:
+                        data["sources"].append({
+                            "quality": f"{q.get('quality', 'Auto')} (Flikhub)",
+                            "url": q.get("url", ""),
+                            "type": q.get("type", "mp4"),
+                            "source": "play"
+                        })
+        except Exception as exc:
+            logger.debug("flikhub proxy error: %s", exc)
+
     return provider.name, data
