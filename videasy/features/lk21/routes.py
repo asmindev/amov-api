@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 import httpx
 
-from videasy.deps import get_client
+from videasy.deps import get_http_client
 from videasy.integrations.lk21 import fetch_lk21_source
 
 router = APIRouter(prefix="/lk21", tags=["lk21"])
@@ -10,7 +10,7 @@ router = APIRouter(prefix="/lk21", tags=["lk21"])
 async def get_lk21_sources(
     title: str,
     year: str = "",
-    client: httpx.AsyncClient = Depends(get_client),
+    client: httpx.AsyncClient = Depends(get_http_client),
 ):
     """Fetch movie sources from LK21 using title."""
     result = await fetch_lk21_source(client, title, year)
