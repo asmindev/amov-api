@@ -61,6 +61,16 @@ DOMAIN_HEADERS: dict[str, dict[str, str]] = {
         "Sec-Fetch-Mode": "cors",
         "Sec-Fetch-Site": "cross-site",
     },
+    "flikhub.net": {
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:152.0) Gecko/20100101 Firefox/152.0",
+        "Accept": "*/*",
+        "Accept-Encoding": "identity",
+        "Origin": "https://player.cinezo.live",
+        "Referer": "https://player.cinezo.live/",
+        "Sec-Fetch-Dest": "video",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "cross-site",
+    },
 }
 
 
