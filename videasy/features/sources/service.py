@@ -154,6 +154,11 @@ async def fetch_sources(
                             "type": q.get("type", "mp4"),
                             "source": "play"
                         })
+                    if data["sources"]:
+                        if "meta" not in data:
+                            data["meta"] = {}
+                        data["meta"]["titleMatched"] = True
+                        data["meta"]["yearMismatch"] = False
                     if "subtitles" in flik_data:
                         if "subtitles" not in data:
                             data["subtitles"] = []

@@ -117,6 +117,9 @@ async def get_sources(
         cover=None,
     )
 
+    if not sources_list:
+        raise HTTPException(status_code=404, detail=f"{provider_name} streams not found")
+
     return UnifiedMediaResponse(
         meta=meta,
         episode=episode_info,

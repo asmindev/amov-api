@@ -100,6 +100,9 @@ async def moviebox_sources(
             yearMismatch=data.get("yearMismatch"),
         )
 
+        if not sources_list:
+            raise HTTPException(status_code=404, detail="Moviebox streams not found")
+
         return UnifiedMediaResponse(
             meta=meta,
             episode=episode_info,
