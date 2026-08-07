@@ -60,6 +60,7 @@ All settings can be overridden via environment variables with the `VIDEASY_` pre
 | `VIDEASY_ORIGIN` | `https://player.videasy.to` | Default Origin header |
 | `VIDEASY_REFERER` | `https://player.videasy.to/` | Default Referer header |
 | `VIDEASY_REQUEST_TIMEOUT` | `30` | Global request timeout (seconds) |
+| `VIDEASY_SUBSOURCE_API_KEY` | `` | SubSource API key (get from subsource.net → Profile → API Key) |
 | `VIDEASY_MOVIEBOX_API_BASE` | `https://h5-api.aoneroom.com` | Moviebox BFF API base |
 | `VIDEASY_MOVIEBOX_SITE_BASE` | `https://themoviebox.xyz` | Moviebox site base used for referer/origin and URLs |
 | `VIDEASY_MOVIEBOX_PLAY_BASE` | `https://themoviebox.xyz` | Moviebox play endpoint base |
@@ -195,7 +196,7 @@ Both `/sources` and `/moviebox/sources` return the same `UnifiedMediaResponse`:
 
 ```bash
 curl "http://localhost:8000/subtitles"
-# { "sources": ["yoru", "neon", "cypher", "breach", "moviebox", "opensubtitles"] }
+# { "sources": ["yoru", "neon", "cypher", "breach", "moviebox", "opensubtitles", "wyzie", "subsource"] }
 ```
 
 ### `GET /subtitles/{provider}` — Fetch Subtitles
@@ -218,6 +219,39 @@ Fetch subtitles from OpenSubtitles by IMDB ID.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `imdbId` | string | yes | IMDB ID (e.g. `tt1234567`) |
+
+### `GET /subsource` — SubSource (official REST API)
+
+Fetch subtitles from SubSource grouped by language via the official
+`api.subsource.net/api/v1/*` REST API (requires `VIDEASY_SUBSOURCE_API_KEY`).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `title` | string | yes | Media title (e.g. `Interstellar`) |
+| `year` | string | yes | Release year (e.g. `2014`) |
+| `tmdbId` | string | yes | TMDB numerical ID |
+| `imdbId` | string | yes | IMDB ID (e.g. `tt0816692`) |
+| `season` | integer | | Season number (TV only) |
+| `episode` | integer | | Episode number (TV only — selects the right SRT from season packs) |
+| `language` | string | | Language filter (e.g. `indonesian`, `english`) |
+
+For TV series each SubSource subtitle is a **season pack** whose ZIP contains
+one SRT per episode; the `episode` param (also forwarded to
+`/subsource/download`) selects the matching SRT file.
+
+```bash
+curl "http://localhost:8000/subsource?title=Kraken&year=2026&tmdbId=1110034&imdbId=tt19838566"
+curl "http://localhost:8000/subsource?title=Breaking+Bad&year=2008&tmdbId=1396&imdbId=tt0903747&season=1&episode=5"
+```
+
+Each subtitle item references `GET /subsource/download?subtitleId=<id>`, which
+downloads the subtitle ZIP/SRT and returns it as VTT text.
+
+```bash
+curl "http://localhost:8000/subsource/download?subtitleId=1083935"
+# WEBVTT
+# ...
+```
 
 ---
 

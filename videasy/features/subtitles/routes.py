@@ -10,6 +10,7 @@ from videasy.features.sources.service import fetch_sources
 from videasy.integrations.wyzie import fetch_wyzie, fetch_wyzie_grouped
 from videasy.integrations.subsource import fetch_subsource_grouped, extract_subsource_vtt
 from videasy.models.source import DecryptedData, SourceParams
+from videasy.config import settings
 from fastapi.responses import PlainTextResponse
 
 router = APIRouter(tags=["Subtitles"])
@@ -59,15 +60,23 @@ async def get_provider_subtitles(
         return {"subtitles": [g.model_dump() for g in groups]}
 
     if provider_lower == "subsource":
-        if not title:
-            raise HTTPException(status_code=400, detail="title is required for SubSource")
+        missing = [p for p in ("title", "year", "tmdbId", "imdbId") if not locals().get(p)]
+        if missing:
+            raise HTTPException(status_code=400, detail=f"Missing required SubSource parameter(s): {', '.join(missing)}")
+        if not settings.subsource_api_key:
+            raise HTTPException(status_code=400, detail="SubSource API key not configured. Set VIDEASY_SUBSOURCE_API_KEY")
         season_num = int(seasonId) if seasonId else None
         episode_num = int(episodeId) if episodeId else None
         groups = await fetch_subsource_grouped(
             request.app.state.api_client,
+            settings.subsource_api_key,
             title=title,
             year=year,
             media_type=mediaType,
+            imdb_id=imdbId,
+            tmdb_id=tmdbId,
+            season=season_num if mediaType == "tv" else None,
+            episode=episode_num if mediaType == "tv" else None,
         )
         return {"subtitles": [g.model_dump() for g in groups]}
 
@@ -126,20 +135,32 @@ async def get_wyzie(
 @router.get(
     "/subsource",
     summary="Fetch SubSource subtitles",
-    description="Fetch subtitles from SubSource grouped by language.",
+    description="Fetch subtitles from SubSource via the official REST API, grouped by language.",
 )
 async def get_subsource(
     request: Request,
     title: str = Query(..., description="Media title (e.g. Interstellar)"),
-    year: str = Query(default="", description="Release year (optional)"),
+    year: str = Query(..., pattern=r"^\d{4}$", description="Release year (e.g. 2014)"),
+    tmdbId: str = Query(..., pattern=r"^\d+$", description="TMDB numerical ID"),
+    imdbId: str = Query(..., pattern=r"^tt\d+$", description="IMDB ID (e.g. tt0816692)"),
     season: int | None = Query(default=None, description="Season number (for TV)"),
+    episode: int | None = Query(default=None, description="Episode number (for TV, used to pick the right SRT from season packs)"),
+    language: str = Query(default="", description="Language filter (e.g. indonesian, english)"),
 ) -> list[dict[str, Any]]:
+    if not settings.subsource_api_key:
+        raise HTTPException(status_code=400, detail="SubSource API key not configured. Set VIDEASY_SUBSOURCE_API_KEY")
     try:
         groups = await fetch_subsource_grouped(
             request.app.state.api_client,
+            settings.subsource_api_key,
             title=title,
             year=year,
             media_type="tv" if season else "movie",
+            imdb_id=imdbId,
+            tmdb_id=tmdbId,
+            language=language,
+            season=season,
+            episode=episode,
         )
         return [g.model_dump() for g in groups]
     except Exception as e:
@@ -148,13 +169,18 @@ async def get_subsource(
 @router.get(
     "/subsource/download",
     summary="Download SubSource subtitle and convert to VTT",
-    description="Takes a SubSource subtitle page url and returns VTT text.",
+    description="Downloads a SubSource subtitle by its subtitleId via the REST API and returns VTT text.",
 )
 async def download_subsource(
     request: Request,
-    url: str = Query(..., description="SubSource subtitle page URL (e.g. /subtitle/evil-dead-burn-2026/arabic/10247749)"),
+    subtitleId: int = Query(..., description="SubSource subtitleId (from /subsource response)"),
+    episode: int | None = Query(default=None, description="Episode number — selects the right SRT from season packs"),
 ) -> PlainTextResponse:
-    vtt_content = await extract_subsource_vtt(request.app.state.api_client, url)
+    if not settings.subsource_api_key:
+        raise HTTPException(status_code=400, detail="SubSource API key not configured. Set VIDEASY_SUBSOURCE_API_KEY")
+    vtt_content = await extract_subsource_vtt(
+        request.app.state.api_client, settings.subsource_api_key, subtitleId, episode
+    )
     if not vtt_content:
         raise HTTPException(status_code=404, detail="Failed to download or extract SubSource subtitle")
     return PlainTextResponse(vtt_content, media_type="text/vtt")
