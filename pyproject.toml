@@ -6,7 +6,7 @@ requires-python = ">=3.11"
 dependencies = [
     "fastapi",
     "uvicorn[standard]",
-    "httpx",
+    "httpx[http2]",
     "a2wsgi",
     "pydantic-settings",
     "jinja2",
